@@ -43,7 +43,7 @@ export declare namespace IVoterRegistrationContract {
 
 export interface IVoterRegistrationContractInterface extends Interface {
   getFunction(
-    nameOrSignature: "getVoterCount" | "isRegistered" | "registeredVoters"
+    nameOrSignature: "getVoterCount" | "getVoterRecord" | "isRegistered"
   ): FunctionFragment;
 
   encodeFunctionData(
@@ -51,11 +51,11 @@ export interface IVoterRegistrationContractInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "isRegistered",
+    functionFragment: "getVoterRecord",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "registeredVoters",
+    functionFragment: "isRegistered",
     values: [BigNumberish]
   ): string;
 
@@ -64,11 +64,11 @@ export interface IVoterRegistrationContractInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "isRegistered",
+    functionFragment: "getVoterRecord",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "registeredVoters",
+    functionFragment: "isRegistered",
     data: BytesLike
   ): Result;
 }
@@ -118,15 +118,15 @@ export interface IVoterRegistrationContract extends BaseContract {
 
   getVoterCount: TypedContractMethod<[], [bigint], "view">;
 
-  isRegistered: TypedContractMethod<
+  getVoterRecord: TypedContractMethod<
     [voterIndex: BigNumberish],
-    [boolean],
+    [IVoterRegistrationContract.VoterRecordStructOutput],
     "view"
   >;
 
-  registeredVoters: TypedContractMethod<
-    [index: BigNumberish],
-    [IVoterRegistrationContract.VoterRecordStructOutput],
+  isRegistered: TypedContractMethod<
+    [voterIndex: BigNumberish],
+    [boolean],
     "view"
   >;
 
@@ -138,15 +138,15 @@ export interface IVoterRegistrationContract extends BaseContract {
     nameOrSignature: "getVoterCount"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
-    nameOrSignature: "isRegistered"
-  ): TypedContractMethod<[voterIndex: BigNumberish], [boolean], "view">;
-  getFunction(
-    nameOrSignature: "registeredVoters"
+    nameOrSignature: "getVoterRecord"
   ): TypedContractMethod<
-    [index: BigNumberish],
+    [voterIndex: BigNumberish],
     [IVoterRegistrationContract.VoterRecordStructOutput],
     "view"
   >;
+  getFunction(
+    nameOrSignature: "isRegistered"
+  ): TypedContractMethod<[voterIndex: BigNumberish], [boolean], "view">;
 
   filters: {};
 }

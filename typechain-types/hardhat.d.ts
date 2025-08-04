@@ -14,26 +14,6 @@ import * as Contracts from ".";
 declare module "hardhat/types/runtime" {
   interface HardhatEthersHelpers extends HardhatEthersHelpersBase {
     getContractFactory(
-      name: "Lock",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.Lock__factory>;
-    getContractFactory(
-      name: "IRegistrationContract",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IRegistrationContract__factory>;
-    getContractFactory(
-      name: "IVoterRegistrationContract",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IVoterRegistrationContract__factory>;
-    getContractFactory(
-      name: "IVotingAndTallyingContract",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IVotingAndTallyingContract__factory>;
-    getContractFactory(
-      name: "LSAGVotingSystemTest",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.LSAGVotingSystemTest__factory>;
-    getContractFactory(
       name: "RegistrationContract",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.RegistrationContract__factory>;
@@ -59,31 +39,6 @@ declare module "hardhat/types/runtime" {
     ): Promise<Contracts.VotingAndTallyingContract__factory>;
 
     getContractAt(
-      name: "Lock",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.Lock>;
-    getContractAt(
-      name: "IRegistrationContract",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.IRegistrationContract>;
-    getContractAt(
-      name: "IVoterRegistrationContract",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.IVoterRegistrationContract>;
-    getContractAt(
-      name: "IVotingAndTallyingContract",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.IVotingAndTallyingContract>;
-    getContractAt(
-      name: "LSAGVotingSystemTest",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.LSAGVotingSystemTest>;
-    getContractAt(
       name: "RegistrationContract",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -115,26 +70,6 @@ declare module "hardhat/types/runtime" {
     ): Promise<Contracts.VotingAndTallyingContract>;
 
     deployContract(
-      name: "Lock",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.Lock>;
-    deployContract(
-      name: "IRegistrationContract",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IRegistrationContract>;
-    deployContract(
-      name: "IVoterRegistrationContract",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IVoterRegistrationContract>;
-    deployContract(
-      name: "IVotingAndTallyingContract",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IVotingAndTallyingContract>;
-    deployContract(
-      name: "LSAGVotingSystemTest",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.LSAGVotingSystemTest>;
-    deployContract(
       name: "RegistrationContract",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.RegistrationContract>;
@@ -159,31 +94,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.VotingAndTallyingContract>;
 
-    deployContract(
-      name: "Lock",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.Lock>;
-    deployContract(
-      name: "IRegistrationContract",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IRegistrationContract>;
-    deployContract(
-      name: "IVoterRegistrationContract",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IVoterRegistrationContract>;
-    deployContract(
-      name: "IVotingAndTallyingContract",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IVotingAndTallyingContract>;
-    deployContract(
-      name: "LSAGVotingSystemTest",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.LSAGVotingSystemTest>;
     deployContract(
       name: "RegistrationContract",
       args: any[],

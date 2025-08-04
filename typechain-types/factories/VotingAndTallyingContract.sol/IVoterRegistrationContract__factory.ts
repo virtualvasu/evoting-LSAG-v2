@@ -30,26 +30,7 @@ const _abi = [
         type: "uint256",
       },
     ],
-    name: "isRegistered",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "",
-        type: "bool",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "index",
-        type: "uint256",
-      },
-    ],
-    name: "registeredVoters",
+    name: "getVoterRecord",
     outputs: [
       {
         components: [
@@ -77,6 +58,25 @@ const _abi = [
         internalType: "struct IVoterRegistrationContract.VoterRecord",
         name: "",
         type: "tuple",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "voterIndex",
+        type: "uint256",
+      },
+    ],
+    name: "isRegistered",
+    outputs: [
+      {
+        internalType: "bool",
+        name: "",
+        type: "bool",
       },
     ],
     stateMutability: "view",

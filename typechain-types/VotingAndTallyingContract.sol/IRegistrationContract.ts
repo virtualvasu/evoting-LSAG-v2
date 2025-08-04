@@ -22,16 +22,12 @@ import type {
 export interface IRegistrationContractInterface extends Interface {
   getFunction(
     nameOrSignature:
-      | "candidates"
       | "electionAuthority"
       | "electionId"
       | "electionSetup"
+      | "getCandidates"
   ): FunctionFragment;
 
-  encodeFunctionData(
-    functionFragment: "candidates",
-    values?: undefined
-  ): string;
   encodeFunctionData(
     functionFragment: "electionAuthority",
     values?: undefined
@@ -44,8 +40,11 @@ export interface IRegistrationContractInterface extends Interface {
     functionFragment: "electionSetup",
     values?: undefined
   ): string;
+  encodeFunctionData(
+    functionFragment: "getCandidates",
+    values?: undefined
+  ): string;
 
-  decodeFunctionResult(functionFragment: "candidates", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "electionAuthority",
     data: BytesLike
@@ -53,6 +52,10 @@ export interface IRegistrationContractInterface extends Interface {
   decodeFunctionResult(functionFragment: "electionId", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "electionSetup",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getCandidates",
     data: BytesLike
   ): Result;
 }
@@ -100,21 +103,18 @@ export interface IRegistrationContract extends BaseContract {
     event?: TCEvent
   ): Promise<this>;
 
-  candidates: TypedContractMethod<[], [string[]], "view">;
-
   electionAuthority: TypedContractMethod<[], [string], "view">;
 
   electionId: TypedContractMethod<[], [string], "view">;
 
   electionSetup: TypedContractMethod<[], [boolean], "view">;
 
+  getCandidates: TypedContractMethod<[], [string[]], "view">;
+
   getFunction<T extends ContractMethod = ContractMethod>(
     key: string | FunctionFragment
   ): T;
 
-  getFunction(
-    nameOrSignature: "candidates"
-  ): TypedContractMethod<[], [string[]], "view">;
   getFunction(
     nameOrSignature: "electionAuthority"
   ): TypedContractMethod<[], [string], "view">;
@@ -124,6 +124,9 @@ export interface IRegistrationContract extends BaseContract {
   getFunction(
     nameOrSignature: "electionSetup"
   ): TypedContractMethod<[], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "getCandidates"
+  ): TypedContractMethod<[], [string[]], "view">;
 
   filters: {};
 }

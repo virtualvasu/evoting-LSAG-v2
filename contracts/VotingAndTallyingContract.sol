@@ -11,14 +11,14 @@ interface IVoterRegistrationContract {
     }
     
     function isRegistered(uint256 voterIndex) external view returns (bool);
-    function registeredVoters(uint256 index) external view returns (VoterRecord memory);
+    function getVoterRecord(uint256 voterIndex) external view returns (VoterRecord memory);
     function getVoterCount() external view returns (uint256);
 }
 
 // Interface for RegistrationContract
 interface IRegistrationContract {
     function electionId() external view returns (bytes32);
-    function candidates() external view returns (bytes32[] memory);
+    function getCandidates() external view returns (bytes32[] memory);
     function electionAuthority() external view returns (address);
     function electionSetup() external view returns (bool);
 }
@@ -143,7 +143,7 @@ contract VotingAndTallyingContract {
 
         // Get voter's voting public key
         IVoterRegistrationContract.VoterRecord memory voterRecord = 
-            IVoterRegistrationContract(voterRegistrationContract).registeredVoters(voterIndex);
+            IVoterRegistrationContract(voterRegistrationContract).getVoterRecord(voterIndex);
 
         // Verify signature on hash using voter's voting public key
         require(
@@ -200,7 +200,7 @@ contract VotingAndTallyingContract {
 
         // Get voter's voting public key for signature verification
         IVoterRegistrationContract.VoterRecord memory voterRecord = 
-            IVoterRegistrationContract(voterRegistrationContract).registeredVoters(voterIndex);
+            IVoterRegistrationContract(voterRegistrationContract).getVoterRecord(voterIndex);
 
         // Verify signature corresponds to a valid candidate
         require(
@@ -227,7 +227,7 @@ contract VotingAndTallyingContract {
         view 
         returns (bytes32[] memory candidates, uint256[] memory voteCounts) 
     {
-        bytes32[] memory allCandidates = IRegistrationContract(registrationContract).candidates();
+        bytes32[] memory allCandidates = IRegistrationContract(registrationContract).getCandidates();
         uint256[] memory counts = new uint256[](allCandidates.length);
         
         for (uint256 i = 0; i < allCandidates.length; i++) {
@@ -360,7 +360,7 @@ contract VotingAndTallyingContract {
         view 
         returns (bool valid) 
     {
-        bytes32[] memory validCandidates = IRegistrationContract(registrationContract).candidates();
+        bytes32[] memory validCandidates = IRegistrationContract(registrationContract).getCandidates();
         
         for (uint256 i = 0; i < validCandidates.length; i++) {
             if (validCandidates[i] == candidate) {

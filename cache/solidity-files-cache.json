@@ -1,0 +1,155 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "/home/virtualvasu/internship_iitbh/evoting-LSAG-v2/contracts/LSAGVotingSystemTest.sol": {
+      "lastModificationDate": 1754307723942,
+      "contentHash": "b81448e4fe3594ee7c6a8106adab9505",
+      "sourceName": "contracts/LSAGVotingSystemTest.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.28"
+      ],
+      "artifacts": [
+        "IRegistrationContract",
+        "IVoterRegistrationContract",
+        "IVotingAndTallyingContract",
+        "LSAGVotingSystemTest"
+      ]
+    },
+    "/home/virtualvasu/internship_iitbh/evoting-LSAG-v2/contracts/RegistrationContract.sol": {
+      "lastModificationDate": 1754307729920,
+      "contentHash": "ec78732555d9a367eae3f6ce366eee19",
+      "sourceName": "contracts/RegistrationContract.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.28"
+      ],
+      "artifacts": [
+        "RegistrationContract"
+      ]
+    },
+    "/home/virtualvasu/internship_iitbh/evoting-LSAG-v2/contracts/VoterRegistrationContract.sol": {
+      "lastModificationDate": 1754307731924,
+      "contentHash": "82d56c0281a023c7834e32df54a9ff6f",
+      "sourceName": "contracts/VoterRegistrationContract.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.28"
+      ],
+      "artifacts": [
+        "IRegistrationContract",
+        "VoterRegistrationContract"
+      ]
+    },
+    "/home/virtualvasu/internship_iitbh/evoting-LSAG-v2/contracts/VotingAndTallyingContract.sol": {
+      "lastModificationDate": 1754307722729,
+      "contentHash": "e1ef0a253deba95c34147413e73152e2",
+      "sourceName": "contracts/VotingAndTallyingContract.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.28"
+      ],
+      "artifacts": [
+        "IRegistrationContract",
+        "IVoterRegistrationContract",
+        "VotingAndTallyingContract"
+      ]
+    }
+  }
+}

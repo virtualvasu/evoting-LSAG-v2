@@ -212,13 +212,11 @@ The current implementation uses placeholder cryptographic functions for:
 - `PhaseChanged(string phase, bool active)`
 - `ResultsFinalized(bytes32[] candidates, uint256[] voteCounts)`
 
-## License
+# Deployed Addresses (Sepolia)
 
-MIT License - see individual contract files for details.
+- RegistrationContractModule#RegistrationContract - 0x06c9851653714e4a2664B2949C64c91E6a28D215
 
-## Contributing
+- VoterRegistrationContractModule#VoterRegistrationContract - 0x199e781F7799D74b160DA6736eFEb9D3dBB15ABc
 
-1. Ensure all contracts compile without errors
-2. Add comprehensive tests for new functionality
-3. Update documentation for any API changes
-4. Follow Solidity best practices and security guidelines
+- VotingAndTallyingContractModule#VotingAndTallyingContract - 0x5Cf752f6931c70fB7CdAf4354B718facf9d2F778
+

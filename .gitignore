@@ -1,1 +1,23 @@
 node_modules
+
+# Environment variables (contains private keys)
+.env
+
+# Build artifacts
+artifacts/
+cache/
+
+# Coverage reports
+coverage/
+coverage.json
+
+# TypeChain
+typechain-types/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

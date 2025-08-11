@@ -1,0 +1,5 @@
+{
+  "RegistrationContractModule#RegistrationContract": "0x06c9851653714e4a2664B2949C64c91E6a28D215",
+  "VoterRegistrationContractModule#VoterRegistrationContract": "0x199e781F7799D74b160DA6736eFEb9D3dBB15ABc",
+  "VotingAndTallyingContractModule#VotingAndTallyingContract": "0x5Cf752f6931c70fB7CdAf4354B718facf9d2F778"
+}

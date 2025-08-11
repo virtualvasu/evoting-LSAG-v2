@@ -75,7 +75,7 @@
       ]
     },
     "/home/virtualvasu/internship_iitbh/evoting-LSAG-v2/contracts/VotingAndTallyingContract.sol": {
-      "lastModificationDate": 1754312142841,
+      "lastModificationDate": 1754312221631,
       "contentHash": "dcceab4b07e9568e8d1e13ceabc2d802",
       "sourceName": "contracts/VotingAndTallyingContract.sol",
       "solcConfig": {

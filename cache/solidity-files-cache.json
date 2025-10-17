@@ -111,6 +111,42 @@
         "IVoterRegistrationContract",
         "VotingAndTallyingContract"
       ]
+    },
+    "/home/virtualvasu/Desktop/evoting-LSAG-v2/contracts/Evoting.sol": {
+      "lastModificationDate": 1760701091871,
+      "contentHash": "000c581d0637d4997ab720f4dd6817e2",
+      "sourceName": "contracts/Evoting.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "EVoting"
+      ]
     }
   }
 }

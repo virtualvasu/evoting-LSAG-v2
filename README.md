@@ -1,222 +1,203 @@
-# LSAG-Based E-Voting Smart Contracts
+# LSAG-Based E-Voting Smart Contract
 
-This repository contains three Solidity smart contracts implementing a complete LSAG (Linkable Spontaneous Anonymous Group) based electronic voting system following a secure multi-phase protocol.
+This repository contains a simplified Solidity smart contract implementing an LSAG (Linkable Spontaneous Anonymous Group) based electronic voting system with essential on-chain functionality.
+
+![E-Voting Protocol Flow](public/evoting.png)
 
 ## Contract Overview
 
-### 1. RegistrationContract.sol (Steps 0-1)
-**Purpose**: Handle certificate storage and election setup
+### EVoting.sol
+**Purpose**: Core bulletin board functionality for LSAG-based e-voting protocol
 
 **Key Features**:
-- Store government-verified voter certificates
-- Setup election parameters (ID, candidates, random challenge)
-- Verify certificate authenticity using PKS signatures
-- Access control for election authority
+- Public key storage and verification
+- Encrypted vote submission
+- Vote tallying with decryption results
+- Event-driven transparency
+- Gas-optimized storage patterns
 
 **Main Functions**:
-- `storePub()`: Store voter certificates with government verification
-- `storePollParams()`: Setup election parameters (authority only)
-- `isCertified()`: Check if a public key is certified
+- `storePub(signature, publicKey)`: Store voter's public key on bulletin board
+- `verify(signature, publicKey)`: Verify stored public key matches provided one
+- `voting(signature, hashValue, encryptedVote)`: Submit encrypted vote with hash
+- `tally(candidate, randomness, voterKey)`: Record decrypted vote for final tallying
 
-### 2. VoterRegistrationContract.sol (Step 2)
-**Purpose**: Handle anonymous voter registration with LSAG signatures
+## Architecture Design
 
-**Key Features**:
-- Anonymous voter registration using LSAG signatures
-- Linkability prevention (no double registration)
-- Key image tracking for LSAG linkability
-- Integration with RegistrationContract for certificate verification
+### On-Chain Components (Smart Contract)
+The `EVoting` contract serves as a **bulletin board** storing:
+- Voter public keys with signatures
+- Encrypted votes with hash commitments
+- Decrypted vote results for tallying
+- Verification status and voting records
 
-**Main Functions**:
-- `verify()`: Register voter with LSAG signature verification
-- `isRegistered()`: Check voter registration status
-- `getVoterCount()`: Get total registered voters
+### Off-Chain Components
+All cryptographic operations are handled off-chain for efficiency and flexibility:
 
-### 3. VotingAndTallyingContract.sol (Steps 3-4)
-**Purpose**: Handle vote casting and tallying phases
+#### LSAG Operations
+- **Ring signature generation**: Create LSAG signatures using voter rings
+- **Signature verification**: Verify LSAG signatures against public key rings
+- **Linkability checking**: Detect double-voting through key image comparison
+- **Key image extraction**: Extract linkable key images from signatures
 
-**Key Features**:
-- Secure vote casting with hash-based verification
-- Vote tallying with signature verification
-- Phase management (voting → tallying → finalized)
-- Result aggregation and reporting
+#### Cryptographic Functions
+- **PKS signature verification**: Verify government certificate signatures
+- **Vote encryption/decryption**: Encrypt votes for privacy, decrypt for tallying
+- **Hash generation**: Create vote commitments and verification hashes
+- **Randomness generation**: Generate cryptographic randomness for protocols
 
-**Main Functions**:
-- `voting()`: Cast votes during voting phase
-- `tally()`: Tally votes during tallying phase
-- `startVotingPhase()`, `startTallyingPhase()`, `finalizeResults()`: Phase management
-- `getTallyResults()`: Get final vote counts
+#### Protocol Logic
+- **Ring formation**: Create anonymity sets from registered voters
+- **Vote validation**: Verify vote format and cryptographic proofs
+- **Tallying algorithms**: Aggregate and count decrypted votes
+- **Result verification**: Verify final tally against individual votes
 
-## Protocol Flow
+### Deployment with Hardhat Ignition
 
-### Phase 0-1: Setup and Registration
-1. Deploy `RegistrationContract` with election authority address
-2. Election authority calls `storePollParams()` to setup election
-3. Eligible voters submit certificates via `storePub()`
-
-### Phase 2: Voter Registration
-1. Deploy `VoterRegistrationContract` with reference to `RegistrationContract`
-2. Certified voters call `verify()` with LSAG signatures to register anonymously
-3. System prevents double registration through key image tracking
-
-### Phase 3: Voting
-1. Deploy `VotingAndTallyingContract` with references to previous contracts
-2. Election authority calls `startVotingPhase()`
-3. Registered voters call `voting()` to cast votes with hash commitments
-
-### Phase 4: Tallying and Results
-1. Election authority calls `startTallyingPhase()`
-2. Voters reveal actual votes via `tally()` function
-3. Election authority calls `finalizeResults()` to complete the process
-
-## Security Features
-
-### Reentrancy Protection
-All contracts include custom reentrancy guards to prevent reentrancy attacks:
-```solidity
-modifier nonReentrant() {
-    require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
-    _status = _ENTERED;
-    _;
-    _status = _NOT_ENTERED;
-}
+**1. Deploy to local network:**
+```bash
+npx hardhat ignition deploy ignition/modules/EVoting.ts --network hardhat
 ```
 
-### Access Control
-- Election authority controls: phase transitions, election setup
-- Voter-only functions: certificate submission, registration, voting
-- Public view functions: result queries, registration checks
-
-### Input Validation
-- All functions validate input parameters
-- Empty signatures/keys rejected
-- Invalid voter indices handled
-- Duplicate operations prevented
-
-## Deployment Guide
-
-### Prerequisites
-- Solidity ^0.8.28
-- Hardhat development environment
-- Node.js and npm
-
-### Deployment Steps
-
-1. **Deploy RegistrationContract**:
-```solidity
-RegistrationContract registrationContract = new RegistrationContract(electionAuthorityAddress);
+**2. Deploy to IITBH network:**
+```bash
+npx hardhat ignition deploy ignition/modules/EVoting.ts --network iitbh
 ```
 
-2. **Deploy VoterRegistrationContract**:
-```solidity
-VoterRegistrationContract voterRegistrationContract = new VoterRegistrationContract(address(registrationContract));
-```
-
-3. **Deploy VotingAndTallyingContract**:
-```solidity
-VotingAndTallyingContract votingContract = new VotingAndTallyingContract(
-    address(voterRegistrationContract),
-    address(registrationContract)
-);
+**3. Deploy with verification:**
+```bash
+npx hardhat ignition deploy ignition/modules/EVoting.ts --network iitbh --verify
 ```
 
 ### Example Usage
 
 ```solidity
-// 1. Setup election
-bytes32 electionId = keccak256("ELECTION_2025");
-bytes32[] memory candidates = [
-    keccak256("CANDIDATE_ALICE"),
-    keccak256("CANDIDATE_BOB")
-];
-bytes32 randomChallenge = keccak256("CHALLENGE_2025");
+// 1. Deploy contract
+EVoting eVoting = new EVoting();
 
-registrationContract.storePollParams(electionId, candidates, randomChallenge);
+// 2. Register voter (off-chain LSAG generation + on-chain storage)
+bytes memory lsagSignature = generateLSAGSignature(voterKeys, ring);
+bytes memory publicKey = extractPublicKey(lsagSignature);
+eVoting.storePub(lsagSignature, publicKey);
 
-// 2. Store voter certificate
-RegistrationContract.Certificate memory cert = RegistrationContract.Certificate({
-    governmentSignature: governmentSig,
-    governmentPublicKey: governmentPubKey,
-    voterPublicKey: voterPubKey
-});
-registrationContract.storePub(cert);
+// 3. Verify registration
+bool isVerified = eVoting.verify(lsagSignature, publicKey);
 
-// 3. Register voter
-uint256 voterIndex = voterRegistrationContract.verify(lsagSignature, votingPublicKey);
+// 4. Cast vote (off-chain encryption + on-chain submission)
+bytes32 voteHash = keccak256(abi.encodePacked(candidateChoice, nonce));
+bytes memory encryptedVote = encryptVote(candidateChoice, publicKey);
+eVoting.voting(lsagSignature, voteHash, encryptedVote);
 
-// 4. Start voting and cast vote
-votingContract.startVotingPhase();
-votingContract.voting(signatureOnHash, voteHash, voterIndex);
-
-// 5. Start tallying and tally vote
-votingContract.startTallyingPhase();
-votingContract.tally(actualVoteSignature, voterIndex);
-
-// 6. Finalize results
-votingContract.finalizeResults();
-(bytes32[] memory finalCandidates, uint256[] memory voteCounts) = votingContract.getTallyResults();
+// 5. Tally vote (off-chain decryption + on-chain recording)
+bytes memory decryptedCandidate = decryptVote(encryptedVote, privateKey);
+bytes memory randomness = generateRandomness();
+eVoting.tally(decryptedCandidate, randomness, voterSignature);
 ```
 
-## Testing
+## Off-Chain Implementation Requirements
 
-The `LSAGVotingSystemTest.sol` contract provides comprehensive testing functionality:
+### Required Cryptographic Libraries
+For production deployment, implement these off-chain components:
 
-```solidity
-// Deploy test contract with existing contract addresses
-LSAGVotingSystemTest testContract = new LSAGVotingSystemTest(
-    address(registrationContract),
-    address(voterRegistrationContract),
-    address(votingContract)
-);
-
-// Run complete test suite
-testContract.runCompleteTest();
+#### LSAG Implementation
+```javascript
+// Example structure for off-chain LSAG operations
+class LSAGOperations {
+    generateRingSignature(message, privateKey, publicKeyRing);
+    verifyRingSignature(signature, message, publicKeyRing);
+    extractKeyImage(signature);
+    checkLinkability(signature1, signature2);
+}
 ```
 
-## Important Notes
+#### Vote Processing
+```javascript
+// Example structure for vote processing
+class VoteProcessor {
+    encryptVote(candidate, publicKey);
+    decryptVote(encryptedVote, privateKey);
+    generateCommitment(vote, randomness);
+    verifyCommitment(vote, randomness, commitment);
+}
+```
 
-### Cryptographic Implementations
-The current implementation uses placeholder cryptographic functions for:
-- PKS signature verification
-- LSAG signature verification and linkability checking
-- Key image extraction
+#### Certificate Verification
+```javascript
+// Example structure for certificate operations
+class CertificateVerifier {
+    verifyGovernmentSignature(certificate, governmentPublicKey);
+    extractVoterPublicKey(certificate);
+    validateCertificate(certificate);
+}
+```
 
-**For production use**, replace these with actual cryptographic library implementations:
-- Use elliptic curve cryptography libraries for PKS operations
-- Implement proper LSAG verification against rings of certified public keys
-- Use proper key image extraction from LSAG signatures
+## Network Configuration
 
-### Gas Optimization
-- Functions use packed structs where possible
-- Events are used for data that doesn't require on-chain storage
-- Efficient storage patterns implemented
+### Hardhat Config
+```typescript
+const config: HardhatUserConfig = {
+  solidity: "0.8.28",
+  networks: {
+    iitbh: {
+      url: 'http://10.10.0.60:8550',
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+    },
+  },
+};
+```
 
-### Error Handling
-- Comprehensive error messages for debugging
-- Graceful handling of edge cases
-- Event emission for failed operations
+### Environment Setup
+Create `.env` file:
+```bash
+PRIVATE_KEY=your_private_key_here
+```
 
-## Events
+## Gas Optimization Features
 
-### RegistrationContract
-- `CertificateStored(bytes indexed voterPublicKey)`
-- `ElectionSetup(bytes32 indexed electionId, uint256 candidateCount)`
+- **Packed structs** for efficient storage
+- **Event-based logging** for non-critical data
+- **Minimal on-chain computation** (cryptography off-chain)
+- **Efficient mapping structures** for quick lookups
 
-### VoterRegistrationContract
-- `VoterRegistered(uint256 indexed voterIndex, bytes votingPublicKey)`
-- `RegistrationRejected(bytes lsagSignature, string reason)`
+## Security Considerations
 
-### VotingAndTallyingContract
-- `VoteCast(uint256 indexed voterIndex, bytes32 voteHash)`
-- `VoteTallied(uint256 indexed voterIndex, bytes32 indexed candidate)`
-- `PhaseChanged(string phase, bool active)`
-- `ResultsFinalized(bytes32[] candidates, uint256[] voteCounts)`
+### Smart Contract Security
+- Reentrancy protection on all state-changing functions
+- Input validation and sanitization
+- Access control through existence checks
+- Event emission for transparency
 
-# Deployed Addresses (Sepolia)
+### Protocol Security
+- **Anonymity**: LSAG signatures provide voter anonymity within rings
+- **Unforgeability**: Only certified voters can participate
+- **Linkability**: Double-voting detection through key images
+- **Verifiability**: All operations recorded on immutable blockchain
 
-- RegistrationContractModule#RegistrationContract - 0x06c9851653714e4a2664B2949C64c91E6a28D215
+### Recommended Security Audits
+1. **Smart contract audit**: Review Solidity code for vulnerabilities
+2. **Cryptographic audit**: Verify off-chain LSAG implementations
+3. **Protocol audit**: Analyze complete voting protocol security
+4. **Integration testing**: Test on-chain/off-chain interaction security
 
-- VoterRegistrationContractModule#VoterRegistrationContract - 0x199e781F7799D74b160DA6736eFEb9D3dBB15ABc
+## Future Enhancements
 
-- VotingAndTallyingContractModule#VotingAndTallyingContract - 0x5Cf752f6931c70fB7CdAf4354B718facf9d2F778
+### Potential Upgrades
+- **Proxy pattern**: Enable contract upgrades while preserving state
+- **Multi-signature authority**: Require multiple authorities for sensitive operations
+- **Threshold decryption**: Distribute decryption keys among multiple parties
+- **Zero-knowledge proofs**: Add ZK-SNARKs for enhanced privacy
+
+### Scalability Improvements
+- **Layer 2 deployment**: Deploy on Polygon/Arbitrum for lower gas costs
+- **Batch operations**: Submit multiple votes in single transaction
+- **State channels**: Handle high-frequency operations off-chain
+- **IPFS integration**: Store large data off-chain with hash references
+
+## Deployed Contract Address
+
+**Network**: IITBH Testnet  
+**Contract Address**: `[0xC8bB6C2A4f56DdE6fDCA134ad1642950876E0D07]`  
+**Block Explorer**: `http://10.10.0.60:8550`
+
+---
 

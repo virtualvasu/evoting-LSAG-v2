@@ -113,8 +113,8 @@
       ]
     },
     "/home/virtualvasu/Desktop/evoting-LSAG-v2/contracts/Evoting.sol": {
-      "lastModificationDate": 1762167516161,
-      "contentHash": "ab3fc777dcccd406374e74aa19282aa6",
+      "lastModificationDate": 1762514948272,
+      "contentHash": "6bb1234a9b1b4ef38512e54cb47de6f6",
       "sourceName": "contracts/Evoting.sol",
       "solcConfig": {
         "version": "0.8.28",

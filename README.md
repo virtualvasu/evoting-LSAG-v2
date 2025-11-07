@@ -133,11 +133,31 @@ After running the setup script, you can proceed with voter registration:
 
 4. **Voter Registration**
    ```bash
-   node scripts/registration/voter-registration.js
+   node scripts/registration/test-voter-registration.js
    ```
-   - Voters generate key pairs
-   - Submit certificates to blockchain (`storePub`)
-   - Complete LSAG registration (`verify`)
+   
+   **What happens during voter registration:**
+   - ✅ Loads voter certificates from previous step
+   - ✅ Tests with Alice Johnson's certificate  
+   - ✅ Generates test wallet for blockchain transactions
+   - ✅ Submits certificate to blockchain (`storePub`)
+   - ✅ Generates LSAG signature for anonymity 
+   - ✅ Completes registration via `verify` function
+   
+   **Expected Output:**
+   ```
+   🗳️ Testing Voter Registration Process...
+   👤 Testing registration for: Alice Johnson (VOTER_001)
+   🔑 Generated test wallet: 0x62bb3E2cEe698229fb693112E100d325a554b7c0
+   📜 Certificate received and validated!
+   📋 Phase 1: Certificate Submission (storePub)
+   📋 Phase 2: LSAG Signature Generation  
+   📋 Phase 3: LSAG Registration (verify)
+   🎉 VOTER REGISTRATION SUCCESSFUL!
+   ✅ Voter is now registered and can participate in voting!
+   ```
+   
+   **Note**: Requires test ETH in generated wallet for gas fees
 
 ### Project Structure
 
@@ -148,7 +168,8 @@ scripts/
 ├── registration/
 │   ├── government-certificate-generator.js  # Core government certificate logic
 │   ├── test-certificate-generation.js       # Generates certificates for 3 test voters
-│   └── voter-registration.js        # Voter registration workflow  
+│   ├── test-voter-registration.js           # Tests voter registration with Alice's certificate
+│   └── voter-registration.js        # Core voter registration workflow  
 ├── utils/
 │   ├── crypto-utils.js             # Core cryptographic functions
 │   └── blockchain-interface.js     # Contract interaction utilities

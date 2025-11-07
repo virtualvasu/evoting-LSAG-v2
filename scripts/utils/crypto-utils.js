@@ -32,7 +32,10 @@ class CryptoUtils {
      * @returns {Object} Wallet object with address and signing capabilities
      */
     static createWallet(privateKey) {
-        const wallet = new ethers.Wallet(privateKey);
+        // Convert Buffer to hex string if needed
+        const privateKeyHex = Buffer.isBuffer(privateKey) ? 
+            ethers.hexlify(privateKey) : privateKey;
+        const wallet = new ethers.Wallet(privateKeyHex);
         return {
             address: wallet.address,
             privateKey: wallet.privateKey,

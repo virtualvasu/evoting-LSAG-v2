@@ -8,7 +8,7 @@ const path = require('path');
  */
 
 class BlockchainInterface {
-    constructor(contractAddress, providerUrl = 'http://localhost:8545') {
+    constructor(contractAddress, providerUrl = 'http://10.10.0.60:8550') {
         this.contractAddress = contractAddress;
         this.provider = new ethers.JsonRpcProvider(providerUrl);
         this.contract = null;
@@ -88,22 +88,40 @@ class BlockchainInterface {
     /**
      * Verify and register voter with LSAG signature
      * @param {Buffer} sigma_vu - LSAG signature
-     * @param {Buffer} P_vu - Voter's public key
+     * @param {Buffer} P_vu - Voter's public key  
+     * @param {string} privateKey - Private key for transaction (optional)
      * @returns {Object} Transaction receipt
      */
-    async verify(sigma_vu, P_vu) {
+    async verify(sigma_vu, P_vu, privateKey = null) {
         try {
-            const tx = await this.contract.verify(sigma_vu, P_vu);
+            let contractToUse = this.contract;
+            
+            // Use provided private key if given
+            if (privateKey) {
+                const wallet = new ethers.Wallet(privateKey, this.provider);
+                // Use the same ABI that's already loaded
+                contractToUse = this.contract.connect(wallet);
+            }
+            
+            const tx = await contractToUse.verify(sigma_vu, P_vu);
             const receipt = await tx.wait();
             
             console.log('Voter registration verified successfully!');
             console.log('Transaction hash:', receipt.hash);
             console.log('Gas used:', receipt.gasUsed.toString());
             
-            return receipt;
+            return {
+                success: true,
+                transactionHash: receipt.hash,
+                gasUsed: receipt.gasUsed.toString(),
+                receipt: receipt
+            };
         } catch (error) {
             console.error('Failed to verify registration:', error);
-            throw error;
+            return {
+                success: false,
+                error: error.message
+            };
         }
     }
 

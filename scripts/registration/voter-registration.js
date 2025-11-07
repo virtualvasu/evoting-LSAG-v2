@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const CryptoUtils = require('../utils/crypto-utils');
 const BlockchainInterface = require('../utils/blockchain-interface');
+const SimpleLSAG = require('../utils/simple-lsag');
+const { ethers } = require('ethers');
 
 /**
  * Voter Registration System for LSAG E-Voting
@@ -140,29 +142,33 @@ class VoterRegistration {
 
     /**
      * Step 4: Generate LSAG signature for registration
-     * @returns {Object} LSAG signature components
+     * @returns {Object} LSAG signature data
      */
     async generateLSAGSignature() {
         try {
-            if (!this.registrationStatus.publicKeyStored) {
-                throw new Error('Public key not stored. Submit certificate first.');
+            console.log('📊 Current voter ring size:', await this.blockchain.getRingSize());
+
+            // Get the current ring from blockchain
+            const ring = await this.blockchain.getVoterRing();
+            console.log('� Our public key hash in ring:', await this.blockchain.isPublicKeyInRing(this.voterKeyPair.publicKey));
+
+            // Find our index in the ring
+            const ourPublicKeyHash = ethers.keccak256(this.voterKeyPair.publicKey);
+            const signerIndex = ring.findIndex(hash => hash === ourPublicKeyHash);
+
+            if (signerIndex === -1) {
+                throw new Error('Signer public key not found in ring');
             }
 
-            // Get current voter ring from blockchain
-            const voterRing = await this.blockchain.getVoterRing();
-            console.log(`📊 Current voter ring size: ${voterRing.length}`);
+            console.log(`🔍 Found signer at index ${signerIndex} in ring of ${ring.length} members`);
 
-            // Create message for LSAG signature (registration message)
-            const registrationMessage = Buffer.from('VOTER_REGISTRATION_' + Date.now().toString(), 'utf8');
-
-            // Convert ring to public key format (this is simplified - real LSAG needs actual public keys)
-            const ringPublicKeys = [this.voterKeyPair.publicKey]; // Simplified: just our key for now
-
-            // Generate LSAG signature
-            const lsagSignature = CryptoUtils.generateLSAGSignature(
+            // Generate LSAG signature using simplified implementation
+            const lsagSignature = SimpleLSAG.generateSignature(
+                'VOTER_REGISTRATION',
                 this.voterKeyPair.privateKey,
-                ringPublicKeys,
-                registrationMessage
+                this.voterKeyPair.publicKey,
+                ring,
+                signerIndex
             );
 
             console.log('🖊️  LSAG signature generated for registration');
@@ -170,7 +176,7 @@ class VoterRegistration {
 
             return {
                 signature: lsagSignature,
-                message: CryptoUtils.bufferToHex(registrationMessage),
+                message: lsagSignature.message,
                 publicKey: CryptoUtils.bufferToHex(this.voterKeyPair.publicKey)
             };
 
@@ -178,33 +184,48 @@ class VoterRegistration {
             console.error('Failed to generate LSAG signature:', error);
             throw error;
         }
-    }
-
-    /**
+    }    /**
      * Step 5: Submit LSAG signature for verification and registration
      * @param {Object} lsagData - LSAG signature data
+     * @param {string} privateKey - Private key for transaction
      * @returns {Object} Transaction receipt
      */
-    async submitLSAGRegistration(lsagData) {
+    async submitLSAGRegistration(lsagData, privateKey) {
         try {
             console.log('📤 Submitting LSAG registration...');
 
-            // Convert signature to format expected by contract (simplified)
-            const signatureBytes = Buffer.concat([
-                CryptoUtils.hexToBuffer(lsagData.signature.c[0]),
-                CryptoUtils.hexToBuffer(lsagData.signature.s[0])
+            // Convert signature to format expected by contract (64 bytes: c + s)
+            // Use only the first c and s values (simplified for contract compatibility)
+            const signatureBytes = ethers.concat([
+                lsagData.signature.c[0],
+                lsagData.signature.s[0]
             ]);
 
             const publicKeyBytes = CryptoUtils.hexToBuffer(lsagData.publicKey);
 
+            console.log('🔍 LSAG Signature Details:');
+            console.log('- Signature bytes length:', ethers.getBytes(signatureBytes).length);
+            console.log('- Public key bytes length:', publicKeyBytes.length);
+            console.log('- c[0]:', lsagData.signature.c[0]);
+            console.log('- s[0]:', lsagData.signature.s[0]);
+
             // Submit to blockchain via verify function
-            const receipt = await this.blockchain.verify(signatureBytes, publicKeyBytes);
+            const result = await this.blockchain.verify(signatureBytes, publicKeyBytes, privateKey);
+
+            if (!result.success) {
+                throw new Error(`Blockchain verification failed: ${result.error}`);
+            }
 
             this.registrationStatus.lsagRegistered = true;
             console.log('✅ LSAG registration completed successfully!');
             console.log('🎉 Voter is now fully registered and can participate in voting!');
 
-            return receipt;
+            return {
+                success: true,
+                hash: result.transactionHash,
+                gasUsed: result.gasUsed,
+                receipt: result.receipt
+            };
 
         } catch (error) {
             console.error('Failed to submit LSAG registration:', error);
@@ -246,7 +267,7 @@ class VoterRegistration {
 
             // Step 5: Submit LSAG registration
             console.log('\n📋 Phase 3: LSAG Registration Submission');
-            const lsagReceipt = await this.submitLSAGRegistration(lsagData);
+            const lsagReceipt = await this.submitLSAGRegistration(lsagData, transactionPrivateKey);
 
             // Final verification
             const ringSize = await this.blockchain.getRingSize();

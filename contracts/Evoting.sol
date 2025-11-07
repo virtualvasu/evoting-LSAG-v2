@@ -112,7 +112,7 @@ contract EVoting {
         return address(uint160(uint256(pubKeyHash)));
     }
 
-    // ---------- LSAG and rest (unchanged) ---------- //
+    // ---------- LSAG and rest ---------- //
 
     function isValidECPoint(bytes memory point) internal pure returns (bool) {
         if (point.length != 64) return false;

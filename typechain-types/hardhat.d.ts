@@ -14,6 +14,10 @@ import * as Contracts from ".";
 declare module "hardhat/types/runtime" {
   interface HardhatEthersHelpers extends HardhatEthersHelpersBase {
     getContractFactory(
+      name: "ECDSA",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ECDSA__factory>;
+    getContractFactory(
       name: "EVoting",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.EVoting__factory>;
@@ -43,6 +47,11 @@ declare module "hardhat/types/runtime" {
     ): Promise<Contracts.VotingAndTallyingContract__factory>;
 
     getContractAt(
+      name: "ECDSA",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ECDSA>;
+    getContractAt(
       name: "EVoting",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -79,6 +88,10 @@ declare module "hardhat/types/runtime" {
     ): Promise<Contracts.VotingAndTallyingContract>;
 
     deployContract(
+      name: "ECDSA",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ECDSA>;
+    deployContract(
       name: "EVoting",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.EVoting>;
@@ -107,6 +120,11 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.VotingAndTallyingContract>;
 
+    deployContract(
+      name: "ECDSA",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ECDSA>;
     deployContract(
       name: "EVoting",
       args: any[],

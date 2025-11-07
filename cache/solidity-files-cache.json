@@ -113,9 +113,48 @@
       ]
     },
     "/home/virtualvasu/Desktop/evoting-LSAG-v2/contracts/Evoting.sol": {
-      "lastModificationDate": 1760701091871,
-      "contentHash": "000c581d0637d4997ab720f4dd6817e2",
+      "lastModificationDate": 1762167516161,
+      "contentHash": "ab3fc777dcccd406374e74aa19282aa6",
       "sourceName": "contracts/Evoting.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/utils/cryptography/ECDSA.sol",
+        "./MessageHashUtils.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "EVoting"
+      ]
+    },
+    "/home/virtualvasu/Desktop/evoting-LSAG-v2/contracts/MessageHashUtils.sol": {
+      "lastModificationDate": 1761908987335,
+      "contentHash": "2acb35d8e2643a53d076ce0b325bf915",
+      "sourceName": "contracts/MessageHashUtils.sol",
       "solcConfig": {
         "version": "0.8.28",
         "settings": {
@@ -142,10 +181,46 @@
       },
       "imports": [],
       "versionPragmas": [
-        "^0.8.0"
+        "^0.8.20"
       ],
       "artifacts": [
-        "EVoting"
+        "MessageHashUtils"
+      ]
+    },
+    "/home/virtualvasu/Desktop/evoting-LSAG-v2/node_modules/@openzeppelin/contracts/utils/cryptography/ECDSA.sol": {
+      "lastModificationDate": 1760700789879,
+      "contentHash": "81de029d56aa803972be03c5d277cb6c",
+      "sourceName": "@openzeppelin/contracts/utils/cryptography/ECDSA.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "ECDSA"
       ]
     }
   }

@@ -1,0 +1,67 @@
+{
+  "voters": {
+    "VOTER_001": {
+      "id": "VOTER_001",
+      "name": "Alice Johnson",
+      "email": "alice@example.com",
+      "publicKey": "0xa866a36c3088db143847163c5a8a169bdc75b3999eda8fdb5488261748aab4a16436731da2385c70cc0fa989dd67a12af5e9e3b8164f47110f7d8a1fd0e89474",
+      "certificateIssued": true,
+      "certificateHash": "0xdf425517bc08bda1685218fd3bcaf237b929593db7d41ac10ed6936aad786e16",
+      "registeredAt": "2025-11-07T10:36:37.900Z",
+      "createdAt": "2025-11-07T10:36:37.815Z"
+    },
+    "VOTER_002": {
+      "id": "VOTER_002",
+      "name": "Bob Smith",
+      "email": "bob@example.com",
+      "publicKey": "0xd266c4cc90f964b71f0cbc80d710ca8d93a457a4e73ef86e76059ab6165104291298f6639c7575a2313411c4fb3011c6ae705252b7d9b0d181e2bf142799bc28",
+      "certificateIssued": true,
+      "certificateHash": "0x4b4315f7c38d2231c9e1f671c7f11814b591068bde7973f611793c155b45e62a",
+      "registeredAt": "2025-11-07T10:36:37.909Z",
+      "createdAt": "2025-11-07T10:36:37.816Z"
+    },
+    "VOTER_003": {
+      "id": "VOTER_003",
+      "name": "Carol Williams",
+      "email": "carol@example.com",
+      "publicKey": "0xff806a4748b753a1288ea3c666811d3387bb6deb110ba88eb747a523ed640568b94de9516e3b188538655c51c6df7b0534b8cfc60b5add0c84c515568e62930e",
+      "certificateIssued": true,
+      "certificateHash": "0x7d46d6de0a232fd2d3111b3f00882b4241a896638017d2e84dc9d2bf34fc0277",
+      "registeredAt": "2025-11-07T10:36:37.921Z",
+      "createdAt": "2025-11-07T10:36:37.816Z"
+    }
+  },
+  "certificates": {
+    "0xdf425517bc08bda1685218fd3bcaf237b929593db7d41ac10ed6936aad786e16": {
+      "voterId": "VOTER_001",
+      "certificate": {
+        "sigma_tilde_v": "0x8d88944912ccc7e2511983563c08f5073bbc4354dec3e572f01cdb55fff8a357540b06823b847b415072a24a2a478a5e955e3831a15cb8e104a59c09e42fd1b31c",
+        "P_ugov": "0x5ca208c3af41006f8d96b2b4939247cfeb58cb4f70d3e0c7a3a1279d859e6ace6a79dcff0c226ca57ab0f8c7bb712b8c77cd4aeded9c2be1eeba915605c4fd0d",
+        "P_uv": "0xa866a36c3088db143847163c5a8a169bdc75b3999eda8fdb5488261748aab4a16436731da2385c70cc0fa989dd67a12af5e9e3b8164f47110f7d8a1fd0e89474"
+      },
+      "issuedAt": "2025-11-07T10:36:37.900Z",
+      "used": false
+    },
+    "0x4b4315f7c38d2231c9e1f671c7f11814b591068bde7973f611793c155b45e62a": {
+      "voterId": "VOTER_002",
+      "certificate": {
+        "sigma_tilde_v": "0x0078297a2da0f28d549d17dd81b3df066f54d1e26b2e257c85777bef63f52cd33fc87869925851b7db84904dc26c6ad5c61dc8b2b1d02eac9ad1f057c145970e1b",
+        "P_ugov": "0x5ca208c3af41006f8d96b2b4939247cfeb58cb4f70d3e0c7a3a1279d859e6ace6a79dcff0c226ca57ab0f8c7bb712b8c77cd4aeded9c2be1eeba915605c4fd0d",
+        "P_uv": "0xd266c4cc90f964b71f0cbc80d710ca8d93a457a4e73ef86e76059ab6165104291298f6639c7575a2313411c4fb3011c6ae705252b7d9b0d181e2bf142799bc28"
+      },
+      "issuedAt": "2025-11-07T10:36:37.909Z",
+      "used": false
+    },
+    "0x7d46d6de0a232fd2d3111b3f00882b4241a896638017d2e84dc9d2bf34fc0277": {
+      "voterId": "VOTER_003",
+      "certificate": {
+        "sigma_tilde_v": "0xb4c9616686c9bda72b79810f749d6285131e886385212447ec5bec9e064376b87d0f058d0809a8f4696d77a459857db7a3f03b60bafdee3a4b8381177bd67baa1c",
+        "P_ugov": "0x5ca208c3af41006f8d96b2b4939247cfeb58cb4f70d3e0c7a3a1279d859e6ace6a79dcff0c226ca57ab0f8c7bb712b8c77cd4aeded9c2be1eeba915605c4fd0d",
+        "P_uv": "0xff806a4748b753a1288ea3c666811d3387bb6deb110ba88eb747a523ed640568b94de9516e3b188538655c51c6df7b0534b8cfc60b5add0c84c515568e62930e"
+      },
+      "issuedAt": "2025-11-07T10:36:37.921Z",
+      "used": false
+    }
+  },
+  "savedAt": "2025-11-07T10:36:37.922Z"
+}

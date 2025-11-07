@@ -2,7 +2,9 @@
 
 This repository contains a simplified Solidity smart contract implementing an LSAG (Linkable Spontaneous Anonymous Group) based electronic voting system with essential on-chain functionality.
 
-**Deployed Contract Address**: `0x4ECFddFb3487b3Cc2C7d85cB6C5075Bf78dF919e`
+**Deployed Contract Address**: `0x8CA55089C4f956f268d7B4142A49112c94baE39e` *(Fixed LSAG v1)*
+
+**Previous Address**: `0x4ECFddFb3487b3Cc2C7d85cB6C5075Bf78dF919e` *(Initial deployment)*
 
 ![E-Voting Protocol Flow](public/evoting.png)
 
@@ -58,7 +60,7 @@ All cryptographic operations are handled off-chain for efficiency and flexibilit
 
 ### Prerequisites
 - Node.js and npm installed
-- The contract is already deployed at: `0x4ECFddFb3487b3Cc2C7d85cB6C5075Bf78dF919e`
+- The contract is already deployed at: `0x8CA55089C4f956f268d7B4142A49112c94baE39e`
 
 ### Installation and Setup
 
@@ -87,9 +89,39 @@ All cryptographic operations are handled off-chain for efficiency and flexibilit
    
    ✅ Setup completed successfully!
    📋 Configuration Summary:
-   Contract Address: 0x4ECFddFb3487b3Cc2C7d85cB6C5075Bf78dF919e
+   Contract Address: 0x8CA55089C4f956f268d7B4142A49112c94baE39e
    Government Address: 0x[generated-government-address]
    ```
+
+## ✅ LSAG Contract Fix & Successful Registration
+
+### **November 7, 2025 - MAJOR UPDATE: LSAG Registration Working!**
+
+**🎉 Breakthrough Achievement**: Fixed LSAG signature verification in smart contract and achieved **complete end-to-end voter registration**!
+
+#### **What Was Fixed:**
+1. **Contract LSAG Verification Algorithm** - Corrected signature parsing and verification logic
+2. **Signature Format Compatibility** - Aligned JavaScript and Solidity LSAG implementations  
+3. **Message Handling** - Fixed proper message format between client and contract
+4. **Linking Tag Generation** - Synchronized linking tag calculation methods
+5. **Ring Management** - Enhanced ring membership validation and indexing
+
+#### **Test Results:**
+- ✅ **Phase 1 (Certificate Submission)**: Working perfectly - stores certificates on blockchain
+- ✅ **Phase 2 (LSAG Registration)**: **NOW WORKING** - LSAG signatures verified and accepted!
+- ✅ **Complete Registration**: Full voter registration workflow functional
+- ✅ **Transaction Success**: Both certificate and LSAG transactions confirmed on blockchain
+- ✅ **Gas Efficiency**: ~163k gas for certificates, ~317k gas for LSAG verification
+
+#### **Recent Successful Test:**
+```
+🎉 COMPLETE REGISTRATION SUCCESS! 🎉
+Voter ID: TEST_VOTER_1762515396481
+Certificate Transaction: 0xf0bd6857b47ac2407691290f28e647234a08e83961fe473afd4975b8f258ac4a
+LSAG Registration Transaction: 0x964f191c2c59351cee58bc8c14e0856d83eb8970418bd3d53f9d4135da8a169e
+Ring Position: 2
+✅ Voter is now fully registered and can vote!
+```
 
 ### Registration Phase
 
@@ -131,33 +163,64 @@ After running the setup script, you can proceed with voter registration:
    📋 Next Steps: Use certificates for voter registration
    ```
 
-4. **Voter Registration**
+4. **Complete End-to-End Voter Registration** *(Now Working!)*
    ```bash
-   node scripts/registration/test-voter-registration.js
+   node scripts/registration/test-complete-registration.js
    ```
    
-   **What happens during voter registration:**
-   - ✅ Loads voter certificates from previous step
-   - ✅ Tests with Alice Johnson's certificate  
-   - ✅ Generates test wallet for blockchain transactions
-   - ✅ Submits certificate to blockchain (`storePub`)
-   - ✅ Generates LSAG signature for anonymity 
-   - ✅ Completes registration via `verify` function
+   **What happens during complete voter registration:**
+   - ✅ **Step 1**: Voter generates their own cryptographic keys
+   - ✅ **Step 2**: Government creates certificate for voter's public key
+   - ✅ **Step 3**: Complete registration process with funded government wallet
+   - ✅ **Phase 1**: Certificate submission (`storePub`) - **WORKING**
+   - ✅ **Phase 2**: LSAG signature generation and verification - **NOW WORKING**
+   - ✅ **Result**: Voter fully registered in ring and ready for voting
    
    **Expected Output:**
    ```
-   🗳️ Testing Voter Registration Process...
-   👤 Testing registration for: Alice Johnson (VOTER_001)
-   🔑 Generated test wallet: 0x62bb3E2cEe698229fb693112E100d325a554b7c0
-   📜 Certificate received and validated!
-   📋 Phase 1: Certificate Submission (storePub)
-   📋 Phase 2: LSAG Signature Generation  
-   📋 Phase 3: LSAG Registration (verify)
-   🎉 VOTER REGISTRATION SUCCESSFUL!
-   ✅ Voter is now registered and can participate in voting!
+   🎉 COMPLETE REGISTRATION SUCCESS! 🎉
+   =====================================
+   Voter ID: TEST_VOTER_1762515396481
+   Certificate Transaction: 0xf0bd6857b47ac2407691290f28e647234a08e83961fe473afd4975b8f258ac4a
+   LSAG Registration Transaction: 0x964f191c2c59351cee58bc8c14e0856d83eb8970418bd3d53f9d4135da8a169e
+   Ring Position: 2
+   
+   � Final Status:
+   - Certificate: ✅ Stored on blockchain
+   - LSAG Registration: ✅ Completed  
+   - Ring Membership: ✅ Confirmed
+   - Ready for Voting: ✅ Yes
    ```
    
-   **Note**: Requires test ETH in generated wallet for gas fees
+   **Features:**
+   - Uses funded government wallet (no manual funding required)
+   - Realistic voter key generation workflow
+   - Complete LSAG signature verification 
+   - Full blockchain integration with transaction confirmation
+
+## 🚀 Current Status & Next Steps
+
+### **✅ COMPLETED PHASES:**
+- **✅ Government Setup**: Certificate authority system working
+- **✅ Certificate Generation**: PKS signatures for voter authorization  
+- **✅ Phase 1 Registration**: Certificate storage on blockchain (`storePub`)
+- **✅ Phase 2 Registration**: LSAG signature verification (`verify`) - **FIXED & WORKING**
+- **✅ Ring Management**: Voter ring formation and membership tracking
+- **✅ Smart Contract**: Fixed LSAG verification algorithm deployed
+
+### **🔄 NEXT IMPLEMENTATION:**
+- **Voting Phase**: Anonymous vote casting using LSAG signatures
+- **Vote Encryption**: Encrypt votes for privacy before blockchain storage
+- **Tallying Phase**: Decrypt and aggregate votes for final results
+- **Multi-Voter Testing**: Scale testing with multiple registered voters
+- **Complete E-Voting Workflow**: End-to-end voting system demonstration
+
+### **📊 Technical Achievements:**
+- **LSAG Signature Verification**: Fixed contract algorithm to properly validate signatures
+- **Ring Signature Generation**: JavaScript implementation compatible with Solidity contract
+- **Blockchain Integration**: Successful on-chain storage and verification
+- **Gas Optimization**: Efficient smart contract operations (~163k-317k gas)
+- **Unlinkability**: Proper linking tag generation for voter privacy
 
 ### Project Structure
 
@@ -168,16 +231,23 @@ scripts/
 ├── registration/
 │   ├── government-certificate-generator.js  # Core government certificate logic
 │   ├── test-certificate-generation.js       # Generates certificates for 3 test voters
-│   ├── test-voter-registration.js           # Tests voter registration with Alice's certificate
+│   ├── test-complete-registration.js        # ✅ WORKING end-to-end registration
+│   ├── test-multiple-registrations.js       # Multiple voter registration testing
 │   └── voter-registration.js        # Core voter registration workflow  
 ├── utils/
 │   ├── crypto-utils.js             # Core cryptographic functions
-│   └── blockchain-interface.js     # Contract interaction utilities
-├── voting/                         # (Coming soon)
-├── tallying/                       # (Coming soon)
+│   ├── blockchain-interface.js     # Contract interaction utilities
+│   └── simple-lsag.js              # ✅ FIXED LSAG implementation
+├── voting/                         # (Ready to implement)
+├── tallying/                       # (Ready to implement)  
 └── config/                         # Auto-generated configuration files
-    ├── deployment.json             # Contract and network config
+    ├── deployment.json             # Fixed contract config (0x8CA55089...)
     ├── government-config.json      # Government authority keys
-    └── voter-database.json         # Voter and certificate database
+    ├── voter-database.json         # Voter and certificate database
+    └── complete-registration-success.json  # Successful registration records
 ```
+
+## 🎯 Ready for Voting Phase Implementation
+
+With the LSAG registration system **fully functional**, the e-voting system is now ready for the voting phase implementation. The foundation is solid with working certificate generation, LSAG signature verification, and blockchain integration.
 

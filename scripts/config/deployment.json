@@ -1,7 +1,8 @@
 {
-  "contractAddress": "0x4ECFddFb3487b3Cc2C7d85cB6C5075Bf78dF919e",
-  "setupTime": "2025-11-07T10:19:41.721Z",
+  "contractAddress": "0x8CA55089C4f956f268d7B4142A49112c94baE39e",
+  "setupTime": "2025-11-07T11:43:34.528Z",
   "network": "iitbh",
   "chainId": "491002",
-  "note": "Configuration for existing deployed contract"
+  "note": "Fixed LSAG contract with corrected verification algorithm",
+  "version": "fixed-lsag-v1"
 }

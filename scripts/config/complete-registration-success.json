@@ -1,0 +1,34 @@
+{
+  "voterId": "TEST_VOTER_1762516018373",
+  "voterName": "Test Voter Alice",
+  "voterKeys": {
+    "privateKey": "0x65874dd3030d56f76e3eaf04c0d22b011f6354fbc2d140a6afc6f2d00006ed55",
+    "publicKey": "0xb49e486ec71bf4b080441a873bd3dc6c68c5b22e10ceca3253ea84141b7d8f6c33f6fbd4c953325c349ab5fe080de3eac70b4fa72ab8e39762f2e78788a4a17f"
+  },
+  "certificate": {
+    "sigma_tilde_v": "0xb190939806a9ea093ebf352f39a1db5690d8cca69a1df2cd7c8f407d6a28a53f5c81a8b5edd2a93be4fe6266a8f26ea1df130867e47d99543adf0655cf83fedc1c",
+    "P_ugov": "0xdd7e4192e4cdea647a39226aed78971fdcdc3c030d33e086870879036c81db8a83a3c1097b661f803037eab244125a69d768aa142e6e2bc582f0acd7839d40e9",
+    "P_uv": "0xb49e486ec71bf4b080441a873bd3dc6c68c5b22e10ceca3253ea84141b7d8f6c33f6fbd4c953325c349ab5fe080de3eac70b4fa72ab8e39762f2e78788a4a17f"
+  },
+  "registrationResult": {
+    "status": "SUCCESS",
+    "registrationStatus": {
+      "keyGenerated": true,
+      "certificateReceived": true,
+      "publicKeyStored": true,
+      "lsagRegistered": true
+    },
+    "transactions": {
+      "certificate": "0x9fe805e73c840445b835e47fcf6bf4aa5d83e6a22b221fb3fb910bc90eaa5c6e",
+      "lsagRegistration": "0xe2e1bf703bf275c31b336d1925d00599a731c2a4dd57341ab2a260bdc298eb31"
+    },
+    "voterInfo": {
+      "publicKey": "0xb49e486ec71bf4b080441a873bd3dc6c68c5b22e10ceca3253ea84141b7d8f6c33f6fbd4c953325c349ab5fe080de3eac70b4fa72ab8e39762f2e78788a4a17f",
+      "certificateHash": "652cea6052eea4d4abfeff4add779716b9783331cf24383a33a73bd1cade6c71",
+      "ringPosition": "10",
+      "registrationIndex": "5"
+    },
+    "completedAt": "2025-11-07T11:47:27.345Z"
+  },
+  "completedAt": "2025-11-07T11:47:27.345Z"
+}

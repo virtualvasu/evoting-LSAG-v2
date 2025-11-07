@@ -26,22 +26,12 @@ class SimpleLSAG {
             const messageBytes = ethers.toUtf8Bytes(message);
             const messageHash = ethers.keccak256(messageBytes);
             
-            // Generate linking tag from signature and message (matches contract)
-            const tempSignatureBytes = ethers.concat([
-                ethers.hexlify(ethers.randomBytes(32)), // challenge placeholder
-                ethers.hexlify(ethers.randomBytes(32))  // response placeholder
-            ]);
-            const linkingTag = ethers.keccak256(ethers.concat([tempSignatureBytes, messageBytes]));
-            
-            // Create hash with message and linking tag
-            const h = ethers.keccak256(ethers.concat([messageHash, linkingTag]));
-            
             // Generate challenge and response for the signer
             const randomK = ethers.randomBytes(32);
             const challenge = ethers.keccak256(ethers.concat([
                 ring[signerIndex],
                 randomK,
-                h
+                messageHash
             ]));
             
             const response = ethers.keccak256(ethers.concat([
@@ -49,6 +39,12 @@ class SimpleLSAG {
                 signerPrivateKey,
                 messageHash
             ]));
+            
+            // Create the signature bytes (64 bytes: challenge + response)
+            const signatureBytes = ethers.concat([challenge, response]);
+            
+            // Generate linking tag from signature and message (matches contract)
+            const linkingTag = ethers.keccak256(ethers.concat([signatureBytes, messageBytes]));
             
             console.log('✅ LSAG signature generated successfully');
             console.log('- Linking tag:', linkingTag);

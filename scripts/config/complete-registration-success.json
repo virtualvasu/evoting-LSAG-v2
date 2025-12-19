@@ -1,34 +1,23 @@
 {
-  "voterId": "TEST_VOTER_1762518392680",
-  "voterName": "Test Voter Alice",
-  "voterKeys": {
-    "privateKey": "0x444a6360fec1e6d5af47028b728de62d8ebbd3db4281a33d68765445e0823c3c",
-    "publicKey": "0xcefd8037b8188a22d5c29a24c56528578c64d3010bc8c7a2d0c699c771e02d26770d08723116daca8e06f2287792f55453b55caed2c89b9f3dd0e3bb570960fe"
+  "VOTER_001": {
+    "voterId": "VOTER_001",
+    "name": "Alice",
+    "privateKey": "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+    "publicKey": "0x048318535b54105d4a7aae60c08fc45f9687181b4fdfc625bd1a753fa7397fed753547f11ca8696646f2f3acb08e31016afac23e630c5d11f59f61fef57b0d2aa5",
+    "ringPosition": 10
   },
-  "certificate": {
-    "sigma_tilde_v": "0x5905da72de95a1ea49ea8ce547347e75e8f223e60009109b0eacb8417495a4c61768af7404b9e8f5aea999671a76e1d8bd503bba624f5ef179a970e43a67a0921c",
-    "P_ugov": "0x95e396207db21e57e9642614b9e5a877edd3c98393d15722ee94cdb0f20033529f0fad32e92a3952eea7cf246ac4c47299c27ac6c2363be34c37f35cfbb60ba8",
-    "P_uv": "0xcefd8037b8188a22d5c29a24c56528578c64d3010bc8c7a2d0c699c771e02d26770d08723116daca8e06f2287792f55453b55caed2c89b9f3dd0e3bb570960fe"
+  "VOTER_002": {
+    "voterId": "VOTER_002",
+    "name": "Bob",
+    "privateKey": "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
+    "publicKey": "0x04ba5734d8f7091719471e7f7ed6b9df170dc70cc661ca05e688601ad984f068b0d67351e5f06073092499336ab0839ef8a521afd334e53807205fa2f08eec74f4",
+    "ringPosition": 11
   },
-  "registrationResult": {
-    "status": "SUCCESS",
-    "registrationStatus": {
-      "keyGenerated": true,
-      "certificateReceived": true,
-      "publicKeyStored": true,
-      "lsagRegistered": true
-    },
-    "transactions": {
-      "certificate": "0x0220bea81592c6de6b3a79aa9817ecb41464979bc1f5be48d516d766c1b15900",
-      "lsagRegistration": "0x0e44f7598b1770db79fe623606673d7a20e9929604569fc1401064d2186e8707"
-    },
-    "voterInfo": {
-      "publicKey": "0xcefd8037b8188a22d5c29a24c56528578c64d3010bc8c7a2d0c699c771e02d26770d08723116daca8e06f2287792f55453b55caed2c89b9f3dd0e3bb570960fe",
-      "certificateHash": "30471b7f814c75d60050d37fc8d409095cd13c04e731993b36b2412176d6e2c6",
-      "ringPosition": "12",
-      "registrationIndex": "6"
-    },
-    "completedAt": "2025-11-07T12:27:01.771Z"
-  },
-  "completedAt": "2025-11-07T12:27:01.777Z"
+  "VOTER_003": {
+    "voterId": "VOTER_003",
+    "name": "Carol",
+    "privateKey": "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a",
+    "publicKey": "0x049d9031e97dd78ff8c15aa86939de9b1e791066a0224e331bc962a2099a7b1f0464b8bbafe1535f2301c72c2cb3535b172da30b02686ab0393d348614f157fbdb",
+    "ringPosition": 12
+  }
 }

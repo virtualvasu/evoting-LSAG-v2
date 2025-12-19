@@ -86,13 +86,14 @@ class BlockchainInterface {
     }
 
     /**
-     * Verify and register voter with LSAG signature
-     * @param {Buffer} sigma_vu - LSAG signature
+     * Verify and register voter with REAL LSAG signature
+     * @param {Buffer} sigma_vu - LSAG signature (all c, s values + key image)
      * @param {Buffer} P_vu - Voter's public key  
+     * @param {Buffer} keyImage - Key image for linkability check
      * @param {string} privateKey - Private key for transaction (optional)
      * @returns {Object} Transaction receipt
      */
-    async verify(sigma_vu, P_vu, privateKey = null) {
+    async verify(sigma_vu, P_vu, keyImage, privateKey = null) {
         try {
             let contractToUse = this.contract;
             
@@ -103,10 +104,11 @@ class BlockchainInterface {
                 contractToUse = this.contract.connect(wallet);
             }
             
-            const tx = await contractToUse.verify(sigma_vu, P_vu);
+            // Call verify with key image for double-registration prevention
+            const tx = await contractToUse.verify(sigma_vu, P_vu, keyImage);
             const receipt = await tx.wait();
             
-            console.log('Voter registration verified successfully!');
+            console.log('✅ REAL LSAG verification succeeded!');
             console.log('Transaction hash:', receipt.hash);
             console.log('Gas used:', receipt.gasUsed.toString());
             
@@ -117,7 +119,7 @@ class BlockchainInterface {
                 receipt: receipt
             };
         } catch (error) {
-            console.error('Failed to verify registration:', error);
+            console.error('Failed to verify REAL LSAG registration:', error);
             return {
                 success: false,
                 error: error.message
@@ -143,16 +145,30 @@ class BlockchainInterface {
     }
 
     /**
-     * Get voter ring (all registered public key hashes)
-     * @returns {Array} Array of public key hashes
+     * Get voter ring (all registered public keys)
+     * @returns {Array} Array of public keys (bytes)
      */
     async getVoterRing() {
         try {
-            const ring = await this.contract.getVoterRing();
+            const ring = await this.contract.getRegisteredPublicKeys();
             console.log(`Voter ring size: ${ring.length}`);
             return ring;
         } catch (error) {
             console.error('Failed to get voter ring:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get voter ring hashes
+     * @returns {Array} Array of public key hashes (bytes32)
+     */
+    async getVoterRingHashes() {
+        try {
+            const hashes = await this.contract.getVoterRing();
+            return hashes;
+        } catch (error) {
+            console.error('Failed to get voter ring hashes:', error);
             throw error;
         }
     }

@@ -1,0 +1,8 @@
+{
+  "contractAddress": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+  "setupTime": "2025-12-19T00:00:00.000Z",
+  "network": "localhost",
+  "networkUrl": "http://127.0.0.1:8545",
+  "chainId": "31337",
+  "note": "Real LSAG verification contract with ring population from storage - deployed to localhost Hardhat node"
+}

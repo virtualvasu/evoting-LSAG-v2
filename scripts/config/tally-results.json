@@ -9,21 +9,21 @@
     "VOTER_001": {
       "status": "SUCCESS",
       "candidate": "Candidate_A",
-      "transactionHash": "0xb1e9594b33b007b2e8a9a85217d446b675add985071353a8270b90f17eb0cb95",
+      "transactionHash": "0xd0c7b4c8dd7968d3121a569ae762c0b0e26e3495465788db6c0c78bbec62f3a7",
       "gasUsed": "27120"
     },
     "VOTER_002": {
       "status": "SUCCESS",
       "candidate": "Candidate_B",
-      "transactionHash": "0x4a86b45bba6cb99d16c39b563bffef4343f5bf19829154b848c998012bd419e7",
+      "transactionHash": "0xf194829c2ecc18c02ffff797f6d1d40a440f8b9cdcf470ecf765d6ee863fa102",
       "gasUsed": "27120"
     },
     "VOTER_003": {
       "status": "SUCCESS",
       "candidate": "Candidate_A",
-      "transactionHash": "0xaa34b3a350f2016d6abd9ff54ed4c026a03f209d751b13a6bd3d5de0dc394db0",
+      "transactionHash": "0x3b3f72c4c48905a51aeede794a4c1eecfc37f1d35901ed3d50a1f9e6e145fe45",
       "gasUsed": "27120"
     }
   },
-  "timestamp": "2025-12-19T13:54:49.983Z"
+  "timestamp": "2025-12-21T19:24:40.579Z"
 }

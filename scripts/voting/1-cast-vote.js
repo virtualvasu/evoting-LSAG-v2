@@ -19,6 +19,7 @@ const { ethers } = require('hardhat');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const readline = require('readline');
 
 // Load configuration
 const deploymentConfig = JSON.parse(
@@ -156,23 +157,61 @@ async function castVote(voterId, candidateName) {
 if (require.main === module) {
     const args = process.argv.slice(2);
     
-    if (args.length < 2) {
-        console.log('\n❌ Usage: node scripts/voting/1-cast-vote.js <voter_id> <candidate>');
+    if (args.length < 1) {
+        console.log('\n❌ Usage: node scripts/voting/1-cast-vote.js <voter_id> [candidate]');
         console.log('\nExample:');
+        console.log('  node scripts/voting/1-cast-vote.js VOTER_001');
         console.log('  node scripts/voting/1-cast-vote.js VOTER_001 Candidate_A');
         console.log('\nAvailable voters: VOTER_001 (Alice), VOTER_002 (Bob), VOTER_003 (Carol)');
         console.log('Available candidates: Candidate_A, Candidate_B, Candidate_C');
         process.exit(1);
     }
     
-    const [voterId, candidate] = args;
+    const voterId = args[0];
+    let candidate = args[1];
     
-    castVote(voterId, candidate)
-        .then(() => process.exit(0))
-        .catch((error) => {
-            console.error(error);
-            process.exit(1);
+    // If candidate not provided, prompt for it
+    if (!candidate) {
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout
         });
+        
+        rl.question('\n🎯 Which candidate do you want to vote for?\n  (Candidate_A / Candidate_B / Candidate_C): ', (answer) => {
+            rl.close();
+            const choice = answer.trim().toLowerCase();
+            
+            // Map input to candidate name
+            const candidates = {
+                'candidate_a': 'Candidate_A',
+                'a': 'Candidate_A',
+                'candidate_b': 'Candidate_B',
+                'b': 'Candidate_B',
+                'candidate_c': 'Candidate_C',
+                'c': 'Candidate_C'
+            };
+            
+            const selectedCandidate = candidates[choice];
+            if (!selectedCandidate) {
+                console.log('\n❌ Invalid candidate. Please choose Candidate_A, Candidate_B, or Candidate_C');
+                process.exit(1);
+            }
+            
+            castVote(voterId, selectedCandidate)
+                .then(() => process.exit(0))
+                .catch((error) => {
+                    console.error(error);
+                    process.exit(1);
+                });
+        });
+    } else {
+        castVote(voterId, candidate)
+            .then(() => process.exit(0))
+            .catch((error) => {
+                console.error(error);
+                process.exit(1);
+            });
+    }
 }
 
 module.exports = { castVote };

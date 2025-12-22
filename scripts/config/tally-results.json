@@ -1,29 +1,29 @@
 {
   "totalVotes": 3,
   "candidateCounts": {
-    "Candidate_A": 1,
-    "Candidate_B": 2
+    "Candidate_X": 2,
+    "Candidate_Y": 1
   },
-  "winner": "Candidate_B",
-  "detailedResults": {
-    "VOTER_001": {
+  "winner": "Candidate_X",
+  "detailedResults": [
+    {
       "status": "SUCCESS",
-      "candidate": "Candidate_A",
-      "transactionHash": "0xb6c34f76c88fdf963445b7f5e2795c07bc32a711db2bfcf0460b2560e7d35990",
-      "gasUsed": "27120"
+      "candidate": "Candidate_X",
+      "transactionHash": "0xaf237c07bce124e46a38b4ceffc5a681230592bbc57306c0e1eeee4b3f68870e",
+      "gasUsed": "28100"
     },
-    "VOTER_002": {
+    {
       "status": "SUCCESS",
-      "candidate": "Candidate_B",
-      "transactionHash": "0x92333a30880e2ac222670bef73b99a43b849a2597865e8aee07ee0e843ae0f45",
-      "gasUsed": "27120"
+      "candidate": "Candidate_X",
+      "transactionHash": "0x3c6b5cc659276a962104e9c592113e0c15a7f256844fcecb80a89a1c998d1222",
+      "gasUsed": "28100"
     },
-    "VOTER_003": {
+    {
       "status": "SUCCESS",
-      "candidate": "Candidate_B",
-      "transactionHash": "0x2afe0de85170c7969910ae4a66f9d8366b899357c658476bc17ef396877ee1ea",
-      "gasUsed": "27120"
+      "candidate": "Candidate_Y",
+      "transactionHash": "0x8b1d21263e7798f4a147f6996bf4fbbec28b5032865aa10d46e4a9de9113b9a5",
+      "gasUsed": "28100"
     }
-  },
-  "timestamp": "2025-12-22T19:05:07.286Z"
+  ],
+  "timestamp": "2025-12-22T19:34:59.701Z"
 }

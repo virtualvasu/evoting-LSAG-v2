@@ -36,26 +36,30 @@ node scripts/registration/register-existing-voters.js
 
 ↓
 
-### Phase 3: Vote Casting
+### Phase 3: Vote Casting (Anonymous)
 ```bash
-node scripts/voting/1-cast-vote.js VOTER_001 Candidate_A
-node scripts/voting/1-cast-vote.js VOTER_002 Candidate_B
-node scripts/voting/1-cast-vote.js VOTER_003 Candidate_A
+node scripts/voting/1-cast-vote.js VOTER_001 Candidate_X
+node scripts/voting/1-cast-vote.js VOTER_002 Candidate_Y
+node scripts/voting/1-cast-vote.js VOTER_003 Candidate_X
 ```
-- Creates commitment: `h_v = H(candidate || randomness)`
-- Signs with voter's private key
-- Submits via `voting()` (~28k gas/vote)
-- Saves to `cast-votes.json`
-- **Result**: 3 votes cast ✅
+- Off-chain: Creates commitment `h_v = H(candidate || randomness)`
+- Off-chain: Signs with voter's private key: `σ'_v = PKS.sign(h_v, Pr_v)`
+- On-chain: Submits `(σ'_v, h_v, k_v)` via `voting()` (~28k gas/vote)
+- Off-chain: Saves anonymous reveals to `vote-reveals.json` (no voter ID!)
+- **Result**: 3 anonymous votes cast ✅
 
 ↓
 
-### Phase 4: Vote Tallying
+### Phase 4: Vote Tallying (Anonymous)
 ```bash
 node scripts/voting/2-tally-votes.js
 ```
-- Reveals `(candidate, randomness)` for each vote
+- Loads anonymous reveals from `vote-reveals.json`
+- **Shuffles votes** to break temporal correlation
+- For each vote: reveals `(candidate, randomness)` to contract
 - Contract verifies: `H(candidate || randomness) == h_v`
-- Submits via `tally()` (~27k gas/vote)
+- Submits via `tally(c, r, k_v)` (~28k gas/vote)
+- Displays only "Processing vote X/Y" (no candidate revealed during tally)
 - Counts votes and determines winner
-- **Result**: Candidate_A wins with 2 votes (66.7%) 🏆
+- **Result**: Candidate_X wins with 2 votes (66.7%) 🏆
+- **Privacy**: No voter ID linkage, shuffled processing - truly anonymous!

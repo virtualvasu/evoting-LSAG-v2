@@ -108,41 +108,39 @@ async function castVote(voterId, candidateName) {
         console.log(`   ✅ Vote cast successfully!`);
         console.log(`   Gas used: ${receipt.gasUsed.toString()}`);
         
-        // Step 6: Save vote details for tallying
-        console.log('\n💾 Step 5: Saving vote details...');
-        const voteRecord = {
-            voterId: voterId,
+        // Step 6: Save ONLY the reveal data for tallying (NO voter identity)
+        console.log('\n💾 Step 5: Saving anonymous vote reveal data...');
+        const revealData = {
             candidate: candidateName,
             randomness: randomness,
             voteHash: h_v,
-            encryptedVote: k_v,
-            signature: signature,
-            publicKey: sigma_v_prime,
-            transactionHash: tx.hash,
+            publicKey: sigma_v_prime,  // Needed to match with blockchain vote
             timestamp: new Date().toISOString()
         };
         
-        // Save to file for tallying phase
+        // Save to anonymous array (NO voter ID mapping)
         const votesDir = path.join(__dirname, '../config');
-        const votesFile = path.join(votesDir, 'cast-votes.json');
+        const votesFile = path.join(votesDir, 'vote-reveals.json');
         
-        let castVotes = {};
+        let voteReveals = [];
         if (fs.existsSync(votesFile)) {
-            castVotes = JSON.parse(fs.readFileSync(votesFile, 'utf8'));
+            voteReveals = JSON.parse(fs.readFileSync(votesFile, 'utf8'));
         }
         
-        castVotes[voterId] = voteRecord;
-        fs.writeFileSync(votesFile, JSON.stringify(castVotes, null, 2));
+        voteReveals.push(revealData);
+        fs.writeFileSync(votesFile, JSON.stringify(voteReveals, null, 2));
         
-        console.log(`   ✅ Vote details saved to cast-votes.json`);
+        console.log(`   ✅ Vote reveal data saved anonymously`);
         
         console.log('\n' + '='.repeat(70));
         console.log('🎉 VOTE CAST SUCCESSFULLY!\n');
-        console.log(`Voter ${voterId} voted for: ${candidateName}`);
+        console.log(`Vote cast for: ${candidateName}`);
+        console.log(`Vote hash: ${h_v}`);
+        console.log(`\n⚠️  Anonymous: Voter identity NOT stored with vote`);
         console.log(`\nNext step: After all votes are cast, run the tally script`);
         console.log(`  node scripts/voting/2-tally-votes.js`);
         
-        return voteRecord;
+        return revealData;
         
     } catch (error) {
         console.error('\n❌ Failed to cast vote:', error.message);

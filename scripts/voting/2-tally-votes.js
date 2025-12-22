@@ -25,21 +25,21 @@ async function tallyVotes() {
     console.log('\n📊 TALLY VOTES - Phase 2\n');
     console.log('='.repeat(70));
     
-    // Step 1: Load cast votes
-    console.log('\n📂 Step 1: Loading cast votes...');
-    const votesFile = path.join(__dirname, '../config/cast-votes.json');
+    // Step 1: Load anonymous vote reveals
+    console.log('\n📂 Step 1: Loading anonymous vote reveals...');
+    const votesFile = path.join(__dirname, '../config/vote-reveals.json');
     
     if (!fs.existsSync(votesFile)) {
-        throw new Error('❌ No votes found. Cast votes first using 1-cast-vote.js');
+        throw new Error('❌ No vote reveals found. Cast votes first using 1-cast-vote.js');
     }
     
-    const castVotes = JSON.parse(fs.readFileSync(votesFile, 'utf8'));
-    const voterIds = Object.keys(castVotes);
+    const voteReveals = JSON.parse(fs.readFileSync(votesFile, 'utf8'));
     
-    console.log(`✅ Found ${voterIds.length} cast vote(s)`);
-    voterIds.forEach(id => {
-        console.log(`   - ${id}: ${castVotes[id].candidate}`);
-    });
+    // Shuffle votes to break temporal correlation
+    const shuffledVotes = [...voteReveals].sort(() => Math.random() - 0.5);
+    
+    console.log(`✅ Found ${shuffledVotes.length} anonymous vote(s)`);
+    console.log(`   (Votes shuffled to preserve anonymity)`);
     
     // Step 2: Connect to contract
     console.log('\n🔗 Step 2: Connecting to contract...');
@@ -49,23 +49,23 @@ async function tallyVotes() {
     console.log(`   Signer: ${signer.address}`);
     
     // Step 3: Tally each vote
-    console.log('\n📊 Step 3: Tallying votes...\n');
+    console.log('\n📊 Step 3: Tallying votes anonymously...\n');
     
-    const tallyResults = {};
+    const tallyResults = [];
     const candidateCounts = {};
     
-    for (const voterId of voterIds) {
-        const voteData = castVotes[voterId];
+    for (let i = 0; i < shuffledVotes.length; i++) {
+        const voteData = shuffledVotes[i];
         
-        console.log(`\n   Tallying vote from ${voterId}...`);
-        console.log(`   Candidate: ${voteData.candidate}`);
+        console.log(`\n   Processing vote ${i + 1}/${shuffledVotes.length}...`);
         
         try {
             // Prepare tally data
             const candidateBytes = ethers.toUtf8Bytes(voteData.candidate);
             const c = ethers.hexlify(candidateBytes);
             const r = voteData.randomness;
-            const k_v = voteData.encryptedVote;
+            // Use publicKey as k_v to identify which vote on blockchain
+            const k_v = voteData.publicKey;
             
             // Submit tally transaction
             const tx = await contract.connect(signer).tally(c, r, k_v);
@@ -76,22 +76,22 @@ async function tallyVotes() {
             console.log(`   ✅ Tallied successfully!`);
             console.log(`   Gas used: ${receipt.gasUsed.toString()}`);
             
-            tallyResults[voterId] = {
+            tallyResults.push({
                 status: 'SUCCESS',
                 candidate: voteData.candidate,
                 transactionHash: tx.hash,
                 gasUsed: receipt.gasUsed.toString()
-            };
+            });
             
             // Count votes per candidate
             candidateCounts[voteData.candidate] = (candidateCounts[voteData.candidate] || 0) + 1;
             
         } catch (error) {
             console.error(`   ❌ Failed to tally: ${error.message}`);
-            tallyResults[voterId] = {
+            tallyResults.push({
                 status: 'FAILED',
                 error: error.message
-            };
+            });
         }
     }
     

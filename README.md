@@ -25,6 +25,21 @@ node scripts/admin/simple-setup.js
 
 ↓
 
+### Phase 1.5: Pre-Registration (Optional)
+```bash
+node scripts/pre_registration/pre-register-voter.js
+```
+**Voter provides**:
+- Name
+- Public Key (64 bytes)
+- Student ID
+
+**Output**:
+- Government signature (65 bytes) signed with government's private key
+- Saved to `pre-registration-{studentId}.json`
+
+↓
+
 ### Phase 2: Voter Registration
 ```bash
 node scripts/registration/register-existing-voters.js

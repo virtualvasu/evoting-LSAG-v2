@@ -1,7 +1,7 @@
 {
-  "address": "0xd425b8be30AAe6C0462303Cd154ED834e0A9C4B3",
-  "publicKey": "0x63629d6fa0f83d03e9c219056460be4326f5ffed7f088eeb6836d70b3ed2c82dba594e9cc96c0cfeadab56d9d1547730b80ff5314441749572a0a645ca62b1b5",
-  "privateKey": "0x14e23c407ef5f11f81d0f66a223cafeadee12c1483ff8f54764e9c32de921f62",
-  "createdAt": "2025-12-22T19:02:44.680Z",
+  "address": "0x6Cb9DB8Be62EB163349B954cC22CDfFe94571ad3",
+  "publicKey": "0x190c8aa6c008f9dc523fd0955155a48137f0fff080c3b1a3a2e404b934387f2e14890911d4c9b790278d0af8c66e58a4d8bbadedfeb6ad633361e3bd499ae904",
+  "privateKey": "0xfe9f910ac7ad1de4e7a65a687f34aa9d75fda47196cae28679a7e3786fc9172a",
+  "createdAt": "2026-01-04T07:32:16.785Z",
   "note": "Government authority keys for certificate generation"
 }

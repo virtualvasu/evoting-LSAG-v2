@@ -1,0 +1,14 @@
+{
+  "voter": {
+    "name": "vasu 3",
+    "publicKey": "0xba5734d8f7091719471e7f7ed6b9df170dc70cc661ca05e688601ad984f068b0d67351e5f06073092499336ab0839ef8a521afd334e53807205fa2f08eec74f4",
+    "studentId": "12342330"
+  },
+  "signature": "0xc2f42a7f3ad9f997ecefc6c5ce4b46b6ae26047cf81123f1af36ee69c96d47dd386a3cd3b05a915add71bf19b07bf35d3c12242df47f30e7bffc122437ae2d5b1c",
+  "signatureLength": 65,
+  "government": {
+    "address": "0x6Cb9DB8Be62EB163349B954cC22CDfFe94571ad3",
+    "publicKey": "0x190c8aa6c008f9dc523fd0955155a48137f0fff080c3b1a3a2e404b934387f2e14890911d4c9b790278d0af8c66e58a4d8bbadedfeb6ad633361e3bd499ae904"
+  },
+  "timestamp": "2026-01-04T13:50:16.668Z"
+}

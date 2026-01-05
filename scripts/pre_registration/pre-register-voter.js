@@ -72,15 +72,18 @@ class PreRegistrationService {
     }
 
     /**
-     * Sign voter's public key using government's private key
-     * This generates a PKS signature (σ̃_v = PKS.sign(P_uv, P_rgov))
+     * Sign voter's credentials using government's private key
+     * This generates a PKS signature (σ̃_v = PKS.sign({voterName, sid, publicKey}, P_rgov))
      */
-    signVoterPublicKey(voterPublicKey) {
+    signVoterCredentials(voterName, voterStudentId, voterPublicKey) {
         // Create wallet from government private key
         const wallet = new ethers.Wallet(this.governmentConfig.privateKey);
 
-        // Hash the voter's public key
-        const messageHash = ethers.keccak256(voterPublicKey);
+        // Hash all three fields using Solidity-compatible packed encoding
+        const messageHash = ethers.solidityPackedKeccak256(
+            ['string', 'string', 'bytes'],
+            [voterName, voterStudentId, voterPublicKey]
+        );
 
         // Sign the hash using Ethereum's personal_sign method
         // This automatically adds the Ethereum message prefix
@@ -95,10 +98,13 @@ class PreRegistrationService {
     /**
      * Verify the signature
      */
-    verifySignature(voterPublicKey, signature) {
+    verifySignature(voterName, voterStudentId, voterPublicKey, signature) {
         try {
-            // Hash the voter's public key
-            const messageHash = ethers.keccak256(voterPublicKey);
+            // Hash all three fields using Solidity-compatible packed encoding
+            const messageHash = ethers.solidityPackedKeccak256(
+                ['string', 'string', 'bytes'],
+                [voterName, voterStudentId, voterPublicKey]
+            );
             const messageBytes = ethers.getBytes(messageHash);
             const ethSignedHash = ethers.hashMessage(messageBytes);
 
@@ -144,8 +150,8 @@ class PreRegistrationService {
 
             console.log('\n🔐 Generating signature...');
             
-            // Sign the voter's public key with government's private key
-            const signature = this.signVoterPublicKey(voterDetails.publicKey);
+            // Sign all voter details with government's private key
+            const signature = this.signVoterCredentials(voterDetails.name, voterDetails.studentId, voterDetails.publicKey);
             const signatureBytes = ethers.getBytes(signature);
 
             console.log('\n✅ Signature Generated!');
@@ -154,7 +160,7 @@ class PreRegistrationService {
 
             // Verify the signature
             console.log('\n🔍 Verifying signature...');
-            const isValid = this.verifySignature(voterDetails.publicKey, signature);
+            const isValid = this.verifySignature(voterDetails.name, voterDetails.studentId, voterDetails.publicKey, signature);
             
             if (isValid) {
                 console.log('✅ Signature verification PASSED');

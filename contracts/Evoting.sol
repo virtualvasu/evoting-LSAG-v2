@@ -39,11 +39,13 @@ contract EVoting {
         uint256[] ringY;          // Y coordinates of ring public keys
     }
 
-    // Certificate structure: CERT_v = {σ̃_v, P_ugov, P_uv}
+    // Certificate structure: CERT_v = {σ̃_v, P_ugov, P_uv, voterName, sid}
     struct Certificate {
-        bytes sigma_tilde_v;   // σ̃_v = PKS.sign(P_uv, P_rgov)
+        bytes sigma_tilde_v;   // σ̃_v = PKS.sign({voter_name, student_id, voter_public_key}, P_rgov)
         bytes P_ugov;          // P_ugov - government public key
         bytes P_uv;            // P_uv - voter's public key
+        string voterName;      // Voter's name
+        string sid;            // Student/Voter ID
     }
 
     // Mappings
@@ -96,13 +98,16 @@ contract EVoting {
         // Check presence
         if (cert.sigma_tilde_v.length != 65 || cert.P_ugov.length != 64 || cert.P_uv.length != 64)
             return false;
+        
+        if (bytes(cert.voterName).length == 0 || bytes(cert.sid).length == 0)
+            return false;
 
-        // the gov’s public key → address
+        // the gov's public key → address
         address govAddr = deriveAddressFromPubKey(cert.P_ugov);
 
-        // message that gov signed: hash of P_uv
-        bytes32 msgHash = keccak256(cert.P_uv);
-    bytes32 ethHash = MessageHashUtils.toEthSignedMessageHash(msgHash);
+        // message that gov signed: hash of (voterName + sid + voterPublicKey)
+        bytes32 msgHash = keccak256(abi.encodePacked(cert.voterName, cert.sid, cert.P_uv));
+        bytes32 ethHash = MessageHashUtils.toEthSignedMessageHash(msgHash);
 
         // recover signer from signature
         address recovered = ethHash.recover(cert.sigma_tilde_v);
@@ -495,9 +500,17 @@ contract EVoting {
     function createCertificate(
         bytes memory sigma_tilde_v,
         bytes memory P_ugov,
-        bytes memory P_uv
+        bytes memory P_uv,
+        string memory voterName,
+        string memory sid
     ) public pure returns (Certificate memory) {
-        return Certificate({ sigma_tilde_v: sigma_tilde_v, P_ugov: P_ugov, P_uv: P_uv });
+        return Certificate({ 
+            sigma_tilde_v: sigma_tilde_v, 
+            P_ugov: P_ugov, 
+            P_uv: P_uv,
+            voterName: voterName,
+            sid: sid
+        });
     }
 
     function isLinkingTagUsed(bytes32 linkingTag) public view returns (bool) {

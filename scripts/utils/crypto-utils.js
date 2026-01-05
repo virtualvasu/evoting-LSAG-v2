@@ -61,8 +61,20 @@ class CryptoUtils {
         const ethSignedHash = ethers.hashMessage(messageHashBytes);
         const signature = wallet.signingKey.sign(ethSignedHash);
         
-        // Return signature in the format expected by Solidity (65 bytes: r + s + v)
-        return ethers.getBytes(signature.serialized);
+        // Create proper 65-byte signature (r + s + v) from components
+        const sig = ethers.Signature.from(signature);
+        // Concatenate r (32 bytes) + s (32 bytes) + v (1 byte)
+        const rBytes = ethers.getBytes(sig.r);
+        const sBytes = ethers.getBytes(sig.s);
+        const vByte = sig.v;
+        
+        // Create 65-byte buffer
+        const result = Buffer.alloc(65);
+        Buffer.from(rBytes).copy(result, 0);
+        Buffer.from(sBytes).copy(result, 32);
+        result[64] = vByte;
+        
+        return result;
     }
 
     /**
@@ -83,8 +95,11 @@ class CryptoUtils {
             // Derive address from public key
             const expectedAddress = this.deriveAddressFromPublicKey(publicKey);
             
+            // Convert signature to hex if it's a Buffer
+            const sigHex = Buffer.isBuffer(signature) ? ethers.hexlify(signature) : signature;
+            
             // Recover address from signature
-            const recoveredAddress = ethers.recoverAddress(ethSignedHash, signature);
+            const recoveredAddress = ethers.recoverAddress(ethSignedHash, sigHex);
             
             return expectedAddress.toLowerCase() === recoveredAddress.toLowerCase();
         } catch (error) {
@@ -217,18 +232,40 @@ class CryptoUtils {
      * @param {Buffer} voterPublicKey - Voter's public key
      * @param {Buffer} governmentPrivateKey - Government's private key
      * @param {Buffer} governmentPublicKey - Government's public key
+     * @param {string} voterName - Voter's name (optional for backward compatibility)
+     * @param {string} sid - Student/Voter ID (optional for backward compatibility)
      * @returns {Object} Certificate object
      */
-    static createCertificate(voterPublicKey, governmentPrivateKey, governmentPublicKey) {
-        // Government signs the voter's public key
-        const messageHash = ethers.keccak256(voterPublicKey);
+    static createCertificate(voterPublicKey, governmentPrivateKey, governmentPublicKey, voterName = null, sid = null) {
+        // If voterName and sid are provided, include them in the signature
+        let messageHash;
+        if (voterName && sid) {
+            // Government signs: hash(voterName + sid + voterPublicKey)
+            messageHash = ethers.keccak256(
+                ethers.concat([
+                    ethers.toUtf8Bytes(voterName),
+                    ethers.toUtf8Bytes(sid),
+                    voterPublicKey
+                ])
+            );
+        } else {
+            // Backward compatibility: sign only the public key
+            messageHash = ethers.keccak256(voterPublicKey);
+        }
+        
         const signature = this.signMessageHash(messageHash, governmentPrivateKey);
 
-        return {
+        const certificate = {
             sigma_tilde_v: signature,
             P_ugov: governmentPublicKey,
             P_uv: voterPublicKey
         };
+        
+        // Include voterName and sid if provided
+        if (voterName) certificate.voterName = voterName;
+        if (sid) certificate.sid = sid;
+        
+        return certificate;
     }
 
     /**

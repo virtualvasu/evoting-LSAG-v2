@@ -25,7 +25,7 @@ node scripts/admin/simple-setup.js
 
 ↓
 
-### Phase 1.5: Pre-Registration (Optional)
+### Phase 1.5: Pre-Registration
 ```bash
 node scripts/pre_registration/pre-register-voter.js
 ```
@@ -34,9 +34,18 @@ node scripts/pre_registration/pre-register-voter.js
 - Public Key (64 bytes)
 - Student ID
 
-**Output**:
-- Government signature (65 bytes) signed with government's private key
-- Saved to `pre-registration-{studentId}.json`
+**Output**: Government-signed certificate `CERT_<sid>.json` with format:
+```json
+{
+  "voterName": "string",
+  "sid": "string",
+  "voterPublicKey": "0x...",
+  "signature": "0x...",
+  "governmentPublicKey": "0x..."
+}
+```
+- Signature: 65 bytes (130 hex chars) signed with government's private key
+- Voter takes this certificate to Bulletin Board (BB) for registration
 
 ↓
 

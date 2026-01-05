@@ -66,12 +66,21 @@ class BlockchainInterface {
 
     /**
      * Store voter's public key certificate on blockchain
-     * @param {Object} certificate - Certificate object {sigma_tilde_v, P_ugov, P_uv}
+     * @param {Object} certificate - Certificate object {sigma_tilde_v, P_ugov, P_uv, voterName, sid}
      * @returns {Object} Transaction receipt
      */
     async storePub(certificate) {
         try {
-            const tx = await this.contract.storePub(certificate);
+            // Ensure certificate has all required fields (new format)
+            const certForContract = {
+                sigma_tilde_v: certificate.sigma_tilde_v || certificate.signature,
+                P_ugov: certificate.P_ugov || certificate.governmentPublicKey,
+                P_uv: certificate.P_uv || certificate.voterPublicKey,
+                voterName: certificate.voterName || '',
+                sid: certificate.sid || ''
+            };
+            
+            const tx = await this.contract.storePub(certForContract);
             const receipt = await tx.wait();
             
             console.log('Certificate stored successfully!');

@@ -1,7 +1,7 @@
 {
-  "contractAddress": "0x4ECFddFb3487b3Cc2C7d85cB6C5075Bf78dF919e",
-  "setupTime": "2026-01-04T07:32:16.680Z",
-  "network": "iitbh",
-  "chainId": "491002",
-  "note": "Configuration for existing deployed contract"
+  "contractAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  "setupTime": "2026-01-06T19:27:00.000Z",
+  "network": "localhost",
+  "chainId": "31337",
+  "note": "Updated EVoting contract with voterName and sid in Certificate struct"
 }

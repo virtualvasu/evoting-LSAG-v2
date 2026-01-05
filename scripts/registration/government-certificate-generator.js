@@ -94,11 +94,12 @@ class GovernmentCertificateGenerator {
 
     /**
      * Generate certificate for a voter
-     * @param {string} voterId - Voter identifier
+     * @param {string} voterId - Voter identifier (sid)
      * @param {Buffer} voterPublicKey - Voter's public key (64 bytes)
+     * @param {string} voterName - Voter's name (optional, defaults to database record)
      * @returns {Object} Certificate object
      */
-    generateCertificate(voterId, voterPublicKey) {
+    generateCertificate(voterId, voterPublicKey, voterName = null) {
         // Check if voter exists and is eligible
         if (!this.voterDatabase.has(voterId)) {
             throw new Error(`Voter ${voterId} not found in eligible voter list`);
@@ -115,12 +116,17 @@ class GovernmentCertificateGenerator {
             throw new Error('Voter public key must be 64 bytes (uncompressed format)');
         }
 
+        // Use provided voterName or fall back to database record
+        const finalVoterName = voterName || voter.name;
+
         try {
-            // Create certificate using PKS (Public Key Signature)
+            // Create certificate using PKS (Public Key Signature) with voterName and sid
             const certificate = CryptoUtils.createCertificate(
                 voterPublicKey,
                 this.governmentPrivateKey,
-                this.governmentPublicKey
+                this.governmentPublicKey,
+                finalVoterName,
+                voterId  // sid
             );
 
             // Generate certificate hash for tracking
@@ -129,7 +135,9 @@ class GovernmentCertificateGenerator {
                     .update(Buffer.concat([
                         certificate.sigma_tilde_v,
                         certificate.P_ugov,
-                        certificate.P_uv
+                        certificate.P_uv,
+                        Buffer.from(finalVoterName),
+                        Buffer.from(voterId)
                     ]))
                     .digest()
             );
@@ -143,25 +151,31 @@ class GovernmentCertificateGenerator {
             // Store certificate
             this.certificateDatabase.set(certificateHash, {
                 voterId: voterId,
+                voterName: finalVoterName,
                 certificate: {
-                    sigma_tilde_v: CryptoUtils.bufferToHex(certificate.sigma_tilde_v),
-                    P_ugov: CryptoUtils.bufferToHex(certificate.P_ugov),
-                    P_uv: CryptoUtils.bufferToHex(certificate.P_uv)
+                    voterName: finalVoterName,
+                    sid: voterId,
+                    voterPublicKey: CryptoUtils.bufferToHex(voterPublicKey),
+                    signature: CryptoUtils.bufferToHex(certificate.sigma_tilde_v),
+                    governmentPublicKey: CryptoUtils.bufferToHex(certificate.P_ugov)
                 },
                 issuedAt: new Date().toISOString(),
                 used: false
             });
 
-            console.log(`✅ Certificate generated for voter ${voterId}`);
+            console.log(`✅ Certificate generated for voter ${voterId} (${finalVoterName})`);
             console.log(`Certificate Hash: ${certificateHash}`);
 
             return {
                 voterId: voterId,
+                voterName: finalVoterName,
                 certificateHash: certificateHash,
                 certificate: {
-                    sigma_tilde_v: CryptoUtils.bufferToHex(certificate.sigma_tilde_v),
-                    P_ugov: CryptoUtils.bufferToHex(certificate.P_ugov),
-                    P_uv: CryptoUtils.bufferToHex(certificate.P_uv)
+                    voterName: finalVoterName,
+                    sid: voterId,
+                    voterPublicKey: CryptoUtils.bufferToHex(voterPublicKey),
+                    signature: CryptoUtils.bufferToHex(certificate.sigma_tilde_v),
+                    governmentPublicKey: CryptoUtils.bufferToHex(certificate.P_ugov)
                 }
             };
 
@@ -173,14 +187,27 @@ class GovernmentCertificateGenerator {
 
     /**
      * Verify certificate authenticity
-     * @param {Object} certificate - Certificate to verify
+     * @param {Object} certificate - Certificate to verify (new format with voterName, sid, voterPublicKey, signature, governmentPublicKey)
      * @returns {boolean} True if certificate is valid
      */
     verifyCertificate(certificate) {
         try {
-            const voterPublicKey = CryptoUtils.hexToBuffer(certificate.P_uv);
-            const governmentPublicKey = CryptoUtils.hexToBuffer(certificate.P_ugov);
-            const signature = CryptoUtils.hexToBuffer(certificate.sigma_tilde_v);
+            // Support both old and new certificate formats
+            let voterPublicKey, governmentPublicKey, signature, voterName, sid;
+            
+            if (certificate.voterPublicKey) {
+                // New format
+                voterPublicKey = CryptoUtils.hexToBuffer(certificate.voterPublicKey);
+                governmentPublicKey = CryptoUtils.hexToBuffer(certificate.governmentPublicKey);
+                signature = CryptoUtils.hexToBuffer(certificate.signature);
+                voterName = certificate.voterName;
+                sid = certificate.sid;
+            } else {
+                // Old format (backward compatibility)
+                voterPublicKey = CryptoUtils.hexToBuffer(certificate.P_uv);
+                governmentPublicKey = CryptoUtils.hexToBuffer(certificate.P_ugov);
+                signature = CryptoUtils.hexToBuffer(certificate.sigma_tilde_v);
+            }
 
             // Verify government public key matches
             if (Buffer.compare(governmentPublicKey, this.governmentPublicKey) !== 0) {
@@ -188,8 +215,23 @@ class GovernmentCertificateGenerator {
                 return false;
             }
 
-            // Verify signature
-            const messageHash = Buffer.from(CryptoUtils.hashVote(certificate.P_uv, Buffer.alloc(0)).slice(2), 'hex');
+            // Verify signature based on format
+            let messageHash;
+            if (voterName && sid) {
+                // New format: verify signature of (voterName + sid + voterPublicKey)
+                const { ethers } = require('ethers');
+                messageHash = ethers.keccak256(
+                    ethers.concat([
+                        ethers.toUtf8Bytes(voterName),
+                        ethers.toUtf8Bytes(sid),
+                        voterPublicKey
+                    ])
+                );
+            } else {
+                // Old format: verify signature of voterPublicKey only
+                messageHash = Buffer.from(CryptoUtils.hashVote(voterPublicKey, Buffer.alloc(0)).slice(2), 'hex');
+            }
+            
             return CryptoUtils.verifySignature(messageHash, signature, governmentPublicKey);
 
         } catch (error) {

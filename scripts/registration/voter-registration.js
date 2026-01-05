@@ -76,25 +76,56 @@ class VoterRegistration {
 
     /**
      * Step 2: Receive certificate from government
-     * @param {Object} certificate - Certificate object from government
+     * @param {Object} certificate - Certificate object from government (new format or old format)
      */
     receiveCertificate(certificate) {
         try {
-            // Validate certificate structure
-            if (!certificate.sigma_tilde_v || !certificate.P_ugov || !certificate.P_uv) {
-                throw new Error('Invalid certificate structure');
+            // Support both old and new certificate formats
+            let voterPublicKey, sigma, govPubKey, voterName, sid;
+            
+            if (certificate.voterPublicKey) {
+                // New format
+                voterPublicKey = certificate.voterPublicKey;
+                sigma = certificate.signature;
+                govPubKey = certificate.governmentPublicKey;
+                voterName = certificate.voterName;
+                sid = certificate.sid;
+            } else {
+                // Old format (backward compatibility)
+                if (!certificate.sigma_tilde_v || !certificate.P_ugov || !certificate.P_uv) {
+                    throw new Error('Invalid certificate structure');
+                }
+                voterPublicKey = certificate.P_uv;
+                sigma = certificate.sigma_tilde_v;
+                govPubKey = certificate.P_ugov;
             }
 
             // Verify certificate is for our public key
             const ourPublicKey = CryptoUtils.bufferToHex(this.voterKeyPair.publicKey);
-            if (certificate.P_uv !== ourPublicKey) {
+            if (voterPublicKey !== ourPublicKey) {
                 throw new Error('Certificate public key does not match voter public key');
             }
 
-            this.certificate = certificate;
+            // Store in both formats for compatibility
+            this.certificate = {
+                // Old format fields
+                sigma_tilde_v: sigma,
+                P_ugov: govPubKey,
+                P_uv: voterPublicKey,
+                // New format fields
+                voterName: voterName,
+                sid: sid,
+                voterPublicKey: voterPublicKey,
+                signature: sigma,
+                governmentPublicKey: govPubKey
+            };
+            
             this.registrationStatus.certificateReceived = true;
             
             console.log('📜 Certificate received and validated!');
+            if (voterName && sid) {
+                console.log(`   Voter: ${voterName} (ID: ${sid})`);
+            }
             console.log('Certificate Hash:', this.getCertificateHash());
             
         } catch (error) {
@@ -117,11 +148,13 @@ class VoterRegistration {
             // Connect to blockchain with wallet
             this.blockchain.connectWallet(privateKey);
 
-            // Convert certificate to proper format for contract
+            // Convert certificate to proper format for contract (now includes voterName and sid)
             const certificateForContract = {
                 sigma_tilde_v: this.certificate.sigma_tilde_v,
                 P_ugov: this.certificate.P_ugov,
-                P_uv: this.certificate.P_uv
+                P_uv: this.certificate.P_uv,
+                voterName: this.certificate.voterName || '',
+                sid: this.certificate.sid || ''
             };
 
             console.log('📤 Submitting certificate to blockchain...');

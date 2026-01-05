@@ -117,23 +117,21 @@ class PreRegistrationService {
      * Save pre-registration data to JSON file
      */
     savePreRegistration(voterDetails, signature) {
-        const output = {
-            voter: voterDetails,
+        // Certificate format with all details at same level
+        const certificate = {
+            voterName: voterDetails.name,
+            sid: voterDetails.studentId,
+            voterPublicKey: voterDetails.publicKey,
             signature: signature,
-            signatureLength: ethers.getBytes(signature).length,
-            government: {
-                address: this.governmentConfig.address,
-                publicKey: this.governmentConfig.publicKey
-            },
-            timestamp: new Date().toISOString()
+            governmentPublicKey: this.governmentConfig.publicKey
         };
 
         // Create output filename based on student ID
-        const outputFilename = `pre-registration-${voterDetails.studentId}.json`;
+        const outputFilename = `CERT_${voterDetails.studentId}.json`;
         const outputPath = path.join(__dirname, outputFilename);
 
-        fs.writeFileSync(outputPath, JSON.stringify(output, null, 2));
-        console.log(`\n✅ Pre-registration data saved to: ${outputFilename}`);
+        fs.writeFileSync(outputPath, JSON.stringify(certificate, null, 2));
+        console.log(`\n✅ Certificate saved to: ${outputFilename}`);
     }
 
     /**

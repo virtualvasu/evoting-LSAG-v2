@@ -1,7 +1,7 @@
 const updateVoterRing = require('./registration_new/update_voter_ring');
 
 async function main() {
-    const certPath = 'scripts/pre_registration/CERT_12340450.json';
+    const certPath = 'scripts/pre_registration/CERT_12345555.json';
     await updateVoterRing(certPath);
 }
 

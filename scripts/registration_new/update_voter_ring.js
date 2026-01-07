@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { ethers } = require('hardhat');
+const BlockchainInterface = require('../utils/blockchain-interface');
 
 /**
  * Simple script to add voter to ring using their certificate
@@ -44,12 +44,18 @@ async function updateVoterRing(certPath) {
         console.log(`  SID: ${certificate.sid}`);
         console.log(`  Public Key: ${certificate.voterPublicKey.substring(0, 20)}...`);
 
-        // Connect to contract
-        const [signer] = await ethers.getSigners();
-        const contract = await ethers.getContractAt('EVoting', contractAddress, signer);
+        // Connect to contract using BlockchainInterface
+        const blockchain = new BlockchainInterface(contractAddress);
+        
+        // Get private key from environment or use default (for local testing)
+        const privateKey = process.env.PRIVATE_KEY || deployment.defaultPrivateKey || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+        blockchain.connectWallet(privateKey);
+        
+        const contract = blockchain.getContract();
+        const wallet = blockchain.wallet;
         
         console.log(`\n📡 Connected to contract: ${contractAddress}`);
-        console.log(`👤 Using signer: ${signer.address}`);
+        console.log(`👤 Using signer: ${wallet.address}`);
 
         // Get current ring size
         const ringSize = await contract.getRingSize();
@@ -91,7 +97,27 @@ async function updateVoterRing(certPath) {
         console.log(`✅ Voter added to ring successfully!`);
         console.log(`   Voter: ${certificate.voterName} (${certificate.sid})`);
         console.log(`   Position in ring: ${(newRingSize - 1n).toString()}`);
-        console.log('='.repeat(70) + '\n');
+        console.log('='.repeat(70));
+
+        // Save voter ring to voter's keys file for Step 3
+        const voterKeysPath = path.join(
+            path.dirname(resolvedCertPath), 
+            `VOTER_KEYS_${certificate.sid}.json`
+        );
+        
+        if (fs.existsSync(voterKeysPath)) {
+            const voterKeys = JSON.parse(fs.readFileSync(voterKeysPath, 'utf8'));
+            voterKeys.voterRing = voterRing;
+            voterKeys.ringPosition = (newRingSize - 1n).toString();
+            voterKeys.ringSize = newRingSize.toString();
+            voterKeys.updatedAt = new Date().toISOString();
+            fs.writeFileSync(voterKeysPath, JSON.stringify(voterKeys, null, 2));
+            console.log(`\n💾 Voter ring saved to: ${voterKeysPath}`);
+        }
+
+        console.log('\n🚀 Next step:');
+        console.log(`  Run: node scripts/registration_new/generate_voting_credentials.js ${resolvedCertPath}`);
+        console.log('');
 
         return {
             success: true,

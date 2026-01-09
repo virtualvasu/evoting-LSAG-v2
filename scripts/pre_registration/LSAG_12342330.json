@@ -1,0 +1,17 @@
+{
+  "voterName": "vasu g",
+  "sid": "12342330",
+  "electionId": "election_001",
+  "newPublicKey": "0x7b2f9784f6672e5f5c9f2bbeb2cc4c68b5e4d246b90a7a24b881a00cd15371c0ba8773bf55bfdf2bc35ed92af7e1f35cc0ff37fe3e8e7b7fe133e9692bd6332d",
+  "newPrivateKey": "0x217d81d13b18a4573bcc80ea417bc2fbab8f437585a7167bfbf61e894ec6adf9",
+  "lsagSignature": {
+    "c": [
+      "0x0x6dc98a85c092843893a84071aebb854b975855f95d0550cafb4de73f10cfaf31"
+    ],
+    "s": [
+      "0x0x607d6f404da72afcfb4f9039f6729bbac8a268a2e6d091dddd94dd3696c14e9d"
+    ],
+    "keyImage": "0x037d285c073ccd5248a81b3e2ab26cf09218d48f4e6c15524726f1ac845bde8087",
+    "message": "0x656c656374696f6e5f303031"
+  }
+}

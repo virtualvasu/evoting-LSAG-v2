@@ -47,6 +47,15 @@ node scripts/pre_registration/pre-register-voter.js
 - Signature: 65 bytes (130 hex chars) signed with government's private key
 - Voter takes this certificate to Bulletin Board (BB) for registration
 
+
+##Update voter ring
+
+CERT_PATH=scripts/pre_registration/CERT_12342330.json npx hardhat run scripts/registration_new/update_voter_ring.js --network localhost
+
+##update LSAG signature
+
+ ORIGINAL_PRIVATE_KEY=0x219b0a0ca69114e5e070494561742870aa70a3a15e5ac6b97b8f2b86e5113b61 REGISTERED_PUBLIC_KEY=0x70b51ec2aeb6b4933d4a0a88199f5c26f9bb2541dfbf6685f80d303a8afb9c9ad690c9d274a61dd9b3b93ff29a14433e10af1fc5f88d3b0cf5170368205085fb VOTER_NAME="vasu g" VOTER_SID="12342330" npx hardhat run scripts/registration_new/generate-lsag-signature.js --network localhost
+
 ↓
 
 ### Phase 2: Voter Registration

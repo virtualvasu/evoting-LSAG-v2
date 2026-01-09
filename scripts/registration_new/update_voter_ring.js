@@ -139,15 +139,26 @@ async function updateVoterRing(certPath) {
 if (require.main === module) {
     const args = process.argv.slice(2);
     
+    // Support both direct node execution and hardhat run
+    // When run via hardhat, use environment variable or default path
+    let certPath;
+    
     if (args.length === 0) {
-        console.log('\nUsage: node update_voter_ring.js <certificate_path>');
-        console.log('\nExample:');
-        console.log('  node update_voter_ring.js ../pre_registration/CERT_12342330.json');
-        console.log('  node update_voter_ring.js /absolute/path/to/CERT_12342330.json\n');
-        process.exit(1);
+        // Check if we have cert path from environment (for hardhat run)
+        certPath = process.env.CERT_PATH;
+        
+        if (!certPath) {
+            console.log('\nUsage: node update_voter_ring.js <certificate_path>');
+            console.log('Or with hardhat: CERT_PATH=path npx hardhat run scripts/registration_new/update_voter_ring.js --network localhost');
+            console.log('\nExample:');
+            console.log('  node update_voter_ring.js ../pre_registration/CERT_12342330.json');
+            console.log('  node update_voter_ring.js /absolute/path/to/CERT_12342330.json');
+            console.log('  CERT_PATH=scripts/pre_registration/CERT_12342330.json npx hardhat run scripts/registration_new/update_voter_ring.js --network localhost\n');
+            process.exit(1);
+        }
+    } else {
+        certPath = args[0];
     }
-
-    const certPath = args[0];
     
     updateVoterRing(certPath)
         .then(() => process.exit(0))

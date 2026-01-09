@@ -1,7 +1,7 @@
 {
-  "contractAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-  "setupTime": "2026-01-07T16:00:49.000Z",
+  "contractAddress": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+  "setupTime": "2026-01-09T12:30:00.000Z",
   "network": "localhost",
   "chainId": "31337",
-  "note": "Updated EVoting contract with voterName and sid in Certificate struct"
+  "note": "Cleaned EVoting contract - voter ring registration only"
 }

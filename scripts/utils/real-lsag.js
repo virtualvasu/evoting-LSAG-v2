@@ -1,5 +1,5 @@
 const { secp256k1 } = require('@noble/curves/secp256k1');
-const { sha256 } = require('@noble/hashes/sha256');
+const { keccak_256 } = require('@noble/hashes/sha3');
 const { bytesToHex, hexToBytes } = require('@noble/hashes/utils');
 const { ethers } = require('ethers');
 
@@ -18,7 +18,7 @@ class RealLSAG {
         const maxAttempts = 256;
         
         while (counter < maxAttempts) {
-            const hash = sha256(Buffer.concat([data, Buffer.from([counter])]));
+            const hash = keccak_256(Buffer.concat([data, Buffer.from([counter])]));
             
             try {
                 // Try to create a valid point with this x-coordinate
@@ -80,6 +80,14 @@ class RealLSAG {
     }
 
     /**
+     * Convert BigInt to 32-byte buffer (padded with zeros if needed)
+     */
+    static bigIntToBuffer(value) {
+        const hex = value.toString(16).padStart(64, '0');
+        return Buffer.from(hex, 'hex');
+    }
+
+    /**
      * Parse ring of public keys (provided as hashes from blockchain)
      * Convert back to actual points for verification
      * NOTE: This is a limitation - need actual public keys in ring
@@ -116,7 +124,7 @@ class RealLSAG {
             const messageBytes = typeof message === 'string' 
                 ? Buffer.from(message, 'utf8')
                 : message;
-            const messageHash = sha256(messageBytes);
+            const messageHash = keccak_256(messageBytes);
             
             // Generate key image
             const keyImage = this.generateKeyImage(privateKeyBytes, publicKeyBytes);
@@ -158,13 +166,19 @@ class RealLSAG {
             // Start computing challenges - first one is from signer position
             let currentIndex = (signerIndex + 1) % n;
             
-            // Hash to get next challenge (closing the ring)
+            // Hash to get next challenge using uncompressed coordinates
+            // Format: keccak256(message || Lix || Liy || Rix || Riy)
+            const L_signer_affine = L_signer.toAffine();
+            const R_signer_affine = R_signer.toAffine();
+            
             let hashInput = Buffer.concat([
                 messageHash,
-                Buffer.from(L_signer.toRawBytes(true)),
-                Buffer.from(R_signer.toRawBytes(true))
+                this.bigIntToBuffer(L_signer_affine.x),
+                this.bigIntToBuffer(L_signer_affine.y),
+                this.bigIntToBuffer(R_signer_affine.x),
+                this.bigIntToBuffer(R_signer_affine.y)
             ]);
-            c[(signerIndex + 1) % n] = BigInt('0x' + bytesToHex(sha256(hashInput)));
+            c[(signerIndex + 1) % n] = BigInt('0x' + bytesToHex(keccak_256(hashInput)));
             
             console.log('✓ Generated signer position challenge');
             
@@ -190,13 +204,19 @@ class RealLSAG {
                 const cI = I.multiply(c[pos]);
                 const Ri = sHp.add(cI);
                 
-                // Compute next challenge
+                // Compute next challenge using uncompressed coordinates
+                // Format: keccak256(message || Lix || Liy || Rix || Riy)
+                const Li_affine = Li.toAffine();
+                const Ri_affine = Ri.toAffine();
+                
                 hashInput = Buffer.concat([
                     messageHash,
-                    Buffer.from(Li.toRawBytes(true)),
-                    Buffer.from(Ri.toRawBytes(true))
+                    this.bigIntToBuffer(Li_affine.x),
+                    this.bigIntToBuffer(Li_affine.y),
+                    this.bigIntToBuffer(Ri_affine.x),
+                    this.bigIntToBuffer(Ri_affine.y)
                 ]);
-                c[(pos + 1) % n] = BigInt('0x' + bytesToHex(sha256(hashInput)));
+                c[(pos + 1) % n] = BigInt('0x' + bytesToHex(keccak_256(hashInput)));
             }
             
             console.log('✓ Generated non-signer challenges');
@@ -215,23 +235,28 @@ class RealLSAG {
             
             console.log('✓ Closed the ring');
             
-            // Verify the ring closes correctly (for debugging)
-            const Li_verify = secp256k1.ProjectivePoint.BASE.multiply(s[signerIndex])
-                .add(ringPoints[signerIndex].multiply(c[signerIndex]));
-            const Hp_verify = this.hashToPoint(publicKeyBytes);
-            const Ri_verify = Hp_verify.multiply(s[signerIndex])
-                .add(I.multiply(c[signerIndex]));
+            // Verify the ring closes correctly (for debugging) - DISABLED FOR NOW
+            // const Li_verify = secp256k1.ProjectivePoint.BASE.multiply(s[signerIndex])
+            //     .add(ringPoints[signerIndex].multiply(c[signerIndex]));
+            // const Hp_verify = this.hashToPoint(publicKeyBytes);
+            // const Ri_verify = Hp_verify.multiply(s[signerIndex])
+            //     .add(I.multiply(c[signerIndex]));
             
-            const hashVerify = Buffer.concat([
-                messageHash,
-                Buffer.from(Li_verify.toRawBytes(true)),
-                Buffer.from(Ri_verify.toRawBytes(true))
-            ]);
-            const c_verify = BigInt('0x' + bytesToHex(sha256(hashVerify)));
+            // const Li_verify_affine = Li_verify.toAffine();
+            // const Ri_verify_affine = Ri_verify.toAffine();
             
-            if (c_verify !== c[(signerIndex + 1) % n]) {
-                console.warn('⚠️  Ring closure verification failed (debugging only)');
-            }
+            // const hashVerify = Buffer.concat([
+            //     messageHash,
+            //     this.bigIntToBuffer(Li_verify_affine.x),
+            //     this.bigIntToBuffer(Li_verify_affine.y),
+            //     this.bigIntToBuffer(Ri_verify_affine.x),
+            //     this.bigIntToBuffer(Ri_verify_affine.y)
+            // ]);
+            // const c_verify = BigInt('0x' + bytesToHex(keccak_256(hashVerify)));
+            
+            // if (c_verify !== c[(signerIndex + 1) % n]) {
+            //     console.warn('⚠️  Ring closure verification failed (debugging only)');
+            // }
             
             console.log('✅ REAL LSAG signature generated successfully');
             
@@ -261,7 +286,7 @@ class RealLSAG {
             const messageBytes = typeof message === 'string'
                 ? Buffer.from(message, 'utf8')
                 : message;
-            const messageHash = sha256(messageBytes);
+            const messageHash = keccak_256(messageBytes);
             
             // Parse signature components
             const c = signature.c.map(val => BigInt(val));
@@ -314,14 +339,19 @@ class RealLSAG {
                 const cI = I.multiply(c[i]);
                 const Ri = sHp.add(cI);
                 
-                // Compute next challenge
+                // Compute next challenge using uncompressed coordinates
+                const Li_affine = Li.toAffine();
+                const Ri_affine = Ri.toAffine();
+                
                 const hashInput = Buffer.concat([
                     messageHash,
-                    Buffer.from(Li.toRawBytes(true)),
-                    Buffer.from(Ri.toRawBytes(true))
+                    this.bigIntToBuffer(Li_affine.x),
+                    this.bigIntToBuffer(Li_affine.y),
+                    this.bigIntToBuffer(Ri_affine.x),
+                    this.bigIntToBuffer(Ri_affine.y)
                 ]);
                 
-                computedC = BigInt('0x' + bytesToHex(sha256(hashInput)));
+                computedC = BigInt('0x' + bytesToHex(keccak_256(hashInput)));
                 
                 // Check if we've closed the ring
                 if ((i + 1) % n === 0) {

@@ -1,0 +1,17 @@
+{
+  "voterName": "test voter 1",
+  "sid": "12340450",
+  "electionId": "election_001",
+  "electionIdHash": "0x3880f3ec42b6e388c0b850db1c7ce8111cdf912870acad8b8e02d7ac03561595",
+  "newPublicKey": "0x4b5df52b4b4746a9836f9aba35313a6e01e22cba39e68ce9dbaa928b47f953fce63ee1d445f82e716397b041e8335394be28b18df72c2dfa4ba4a1ca15f3714e",
+  "newPrivateKey": "0xd3a4bb5f8afbfc2c2bd1add83061078d56a1f71c5257fc613a2d9b31f02f9218",
+  "lsagSignature": {
+    "keyImageX": "0xa0f5443c2d88e8e8ddc4f0e162c588436f852f81f28faedca98d555a553a2e83",
+    "keyImageY": "0x51fce0733cb5098801946b6064794e178bd2ed23bdc7c658410083b743caec28",
+    "c": "0x19e0d5237383cb3e8ca1c8c1cb13798b5318f38958b84d7bc69c3ef50bff15ab",
+    "s": [
+      "0x51382298b8fca975ab3a3e1d481ac5f9fc9574478c5e217f26a7fa75842fd8e9",
+      "0x09657ce24e211061367759e539db6ea33602fd8ab92443d668bafae944a0761c"
+    ]
+  }
+}

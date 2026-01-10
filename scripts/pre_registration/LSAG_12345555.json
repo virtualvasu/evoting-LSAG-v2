@@ -1,0 +1,18 @@
+{
+  "voterName": "test voter 2",
+  "sid": "12345555",
+  "electionId": "election_001",
+  "electionIdHash": "0x3880f3ec42b6e388c0b850db1c7ce8111cdf912870acad8b8e02d7ac03561595",
+  "newPublicKey": "0xa5d8902e787799b931d8648b118ab7972ed8956da65600e50d249c3bd746099838a2a31a88ec505d0f82e7ca70cb4754dd269ea8543163c38f45ee4ec6106d67",
+  "newPrivateKey": "0xe2a69e520ca3fdff71228277009e7004dabd7d46646d95309d44447940e3c97f",
+  "lsagSignature": {
+    "keyImageX": "0x9a7691f381a24f8a367c93b6dad329974b49aecdaffaaafff47030f9106027dc",
+    "keyImageY": "0xebf14a1afcbee2794e952aa84db7e6ce47582d539976db9016ecf658f736c3a5",
+    "c": "0xb834bf41c178b8b50279c247f054652ef9e2d392fbb24f3fddffb9d1c72d4025",
+    "s": [
+      "0xa39a3a6e744b5f60f0cdb5d753ec5a8164ddee65f3b40ce8a5d5056cc901946b",
+      "0xbe37a85905b39494021d3174c38458e46a7b952c2445046ea5416e08fba21c5e",
+      "0x80d1d2537825f3ec4d42f8da27c319fb47c00e7c8fb946eb9c5b2e1706213ce7"
+    ]
+  }
+}

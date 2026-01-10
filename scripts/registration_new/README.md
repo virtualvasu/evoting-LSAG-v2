@@ -216,3 +216,204 @@ After completing all registration steps, the voter will have:
 3. **LSAG Signature**: Proves ring membership without revealing identity
 4. **Key Image**: Prevents double registration/voting
 5. **Separation**: Registration keys ≠ Voting keys (by design)
+
+
+-------------------------------------------
+
+ node scripts/generate-keypair.js
+Generating new secp256k1 key pair...
+
+✅ New Key Pair Generated:
+
+Private Key:
+  0x11c681176c8c1ed70e6d87e9924e3c84a905dee0cf5401d92c41ff4d7e6b4d0a
+
+Public Key (64 bytes, uncompressed):
+  0x72f176d8fa78b3c1fafaf3dce1d17020b84e297f7569396afbc7837ff3f4dfd1ce9ed5deb6616af922c93d97696c912a012624adcbf88beb9466a16b4cf4b356
+
+Public Key X:
+  0x72f176d8fa78b3c1fafaf3dce1d17020b84e297f7569396afbc7837ff3f4dfd1
+
+Public Key Y:
+  0xce9ed5deb6616af922c93d97696c912a012624adcbf88beb9466a16b4cf4b356
+
+──────────────────────────────────────────────────────────────────────
+Save these values! You'll need:
+1. Private Key: for signing LSAG signatures
+2. Public Key: for registration in the voter ring
+──────────────────────────────────────────────────────────────────────
+
+✓ Verification: PASSED
+❯ node scripts/pre_registration/pre-register-voter.js
+🏛️  Pre-Registration Service initialized
+Government Address: 0xcBe9CfD1ECE95Cc47A24533F11fA05DDEddb5fAA
+
+📋 Voter Pre-Registration
+==================================================
+Enter voter name: test voter 2
+Enter voter public key (64 bytes hex, with or without 0x): 0x72f176d8fa78b3c1fafaf3dce1d17020b84e297f7569396afbc7837ff3f4dfd1ce9ed5deb6616af922c93d97696c912a012624adcbf88beb9466a16b4cf4b356
+Enter student ID: 12345555
+
+🔐 Generating signature...
+
+✅ Signature Generated!
+Signature: 0x7b2f3c25bba6fc1d5ea85ee6e98fb56942b55f6d48d7cd57c44a2224cb68f8595d13d04a8275d2bff6b99b3822adcc723b889f206cb982ef69fdeb692d2c087f1b
+Signature Length: 65 bytes
+
+🔍 Verifying signature...
+✅ Signature verification PASSED
+
+✅ Certificate saved to: CERT_12345555.json
+
+📊 Pre-Registration Summary
+==================================================
+Voter Name: test voter 2
+Student ID: 12345555
+Public Key: 0x72f176d8fa78b3c1fafaf3dce1d17020b84e297f7569396afbc7837ff3f4dfd1ce9ed5deb6616af922c93d97696c912a012624adcbf88beb9466a16b4cf4b356
+Signature: 0x7b2f3c25bba6fc1d5ea85ee6e98fb56942b55f6d48d7cd57c44a2224cb68f8595d13d04a8275d2bff6b99b3822adcc723b889f206cb982ef69fdeb692d2c087f1b
+Signature Length: 65 bytes
+Government Address: 0xcBe9CfD1ECE95Cc47A24533F11fA05DDEddb5fAA
+❯ node scripts/registration_new/update_voter_ring.js scripts/pre_registration/CERT_12345555.json
+
+📋 Update Voter Ring
+
+======================================================================
+
+📄 Loading certificate from: /home/virtualvasu/Desktop/evoting_project/evoting-LSAG-v2/scripts/pre_registration/CERT_12345555.json
+
+✓ Certificate loaded
+  Voter: test voter 2
+  SID: 12345555
+  Public Key: 0x72f176d8fa78b3c1fa...
+Connected wallet: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+
+📡 Connected to contract: 0x998abeb3E57409262aE5b751f60747921B33613E
+👤 Using signer: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+
+📊 Current ring size: 2
+
+📤 Submitting certificate to contract...
+  Transaction hash: 0xa01ce1bcf7c3b1f5da4e4ea6ea8dde1f6c3d33722b909520f3ef86a603520d64
+  Waiting for confirmation...
+  ✅ Transaction confirmed!
+  Gas used: 222118
+
+📊 Updated ring size: 3
+
+🔐 Updated Voter Ring:
+======================================================================
+  [0] 0x0bf82e5907c7db04ab6bf2ec12f96fbe225ca6db3f201ac00b8360ba084cea80
+  [1] 0x64e53b9dac85d07fc6e2f071519c8eb5d3ac1690ae98e993f4a249b2ffae5734
+  [2] 0x75c385adac59003cc37b28237c7151b84abba86007e3cfea6f794c9f0b66bf64
+
+======================================================================
+✅ Voter added to ring successfully!
+   Voter: test voter 2 (12345555)
+   Position in ring: 2
+======================================================================
+
+🚀 Next step:
+  Run: node scripts/registration_new/generate_voting_credentials.js /home/virtualvasu/Desktop/evoting_project/evoting-LSAG-v2/scripts/pre_registration/CERT_12345555.json
+
+❯ 
+ORIGINAL_PRIVATE_KEY=0x11c681176c8c1ed70e6d87e9924e3c84a905dee0cf5401d92c41ff4d7e6b4d0a REGISTERED_PUBLIC_KEY=0x72f176d8fa78b3c1fafaf3dce1d17020b84e297f7569396afbc7837ff3f4dfd1ce9ed5deb6616af922c93d97696c912a012624adcbf88beb9466a16b4cf4b356 VOTER_NAME="test voter 2" VOTER_SID="12345555" npx hardhat run scripts/registration_new/generate-lsag-signature.js --network localhost
+
+🔐 Generate LSAG Signature
+
+======================================================================
+
+✓ Input parameters validated
+  Voter: test voter 2
+  SID: 12345555
+  Private Key: 0x11c681176c8c1ed70e...
+  Registered Public Key: 0x72f176d8fa78b3c1fa...
+
+📡 Connected to contract: 0x998abeb3E57409262aE5b751f60747921B33613E
+
+📊 Fetching voter ring...
+  Ring size: 3
+  ✓ Found voter at position 2 in ring
+
+🔑 Generating new PKS key pair...
+  ✓ New key pair generated
+  Public Key: 0xa5d8902e787799b931...
+
+🔐 Generating LSAG signature using original private key...
+  ✓ Using ORIGINAL private key for LSAG signature
+  ✓ Signing election ID: election_001
+Generating simple LSAG signature...
+  Ring size: 3
+  Signer index: 2
+  ✓ Key image computed
+  ✓ Random alpha generated
+  ✓ Initial challenge at position 0
+  ✓ Ring closed at position 2
+✅ Simple LSAG signature generated
+  c[0]: 0xb834bf41c178b8b5...
+  ✓ LSAG signature generated
+  Key Image X: 0x9a7691f381a24f8a367c93b6dad329974b49aecdaffaaafff47030f9106027dc
+  Key Image Y: 0xebf14a1afcbee2794e952aa84db7e6ce47582d539976db9016ecf658f736c3a5
+  Challenge c[0]: 0xb834bf41c178b8b50279c247f054652ef9e2d392fbb24f3fddffb9d1c72d4025
+  Responses: 3 values
+
+📤 Signature saved to: /home/virtualvasu/Desktop/evoting_project/evoting-LSAG-v2/scripts/pre_registration/LSAG_12345555.json
+
+======================================================================
+✅ LSAG Signature generated successfully!
+   Voter: test voter 2 (12345555)
+   Election ID: election_001
+   New Public Key: 0xa5d8902e787799b931...
+   Key Image X: 0x9a7691f381a24f8a...
+   Key Image Y: 0xebf14a1afcbee279...
+======================================================================
+
+❯ 
+❯ LSAG_FILE=scripts/pre_registration/LSAG_12345555.json npx hardhat run scripts/registration_new/submit-lsag-registration.js --network localhost
+
+📝 Submit LSAG Registration (BB.verify)
+
+======================================================================
+
+📂 Loading LSAG signature from: /home/virtualvasu/Desktop/evoting_project/evoting-LSAG-v2/scripts/pre_registration/LSAG_12345555.json
+  ✓ Loaded signature for voter: test voter 2 (12345555)
+
+📡 Connected to contract: 0x998abeb3E57409262aE5b751f60747921B33613E
+  Signer: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+
+🔑 Key Image:
+  X: 0x9a7691f381a24f8a367c93b6dad329974b49aecdaffaaafff47030f9106027dc
+  Y: 0xebf14a1afcbee2794e952aa84db7e6ce47582d539976db9016ecf658f736c3a5
+
+📋 LSAG Signature Parameters:
+  Election ID: election_001
+  Election ID (hash): 0x3880f3ec42b6e388c0b850db1c7ce8111cdf912870acad8b8e02d7ac03561595
+  Challenge c: 0xb834bf41c178b8b50279c247f054652ef9e2d392fbb24f3fddffb9d1c72d4025
+  Responses s: 3 values
+
+🆕 New Public Key: 0xa5d8902e787799b931...
+
+🔐 Calling BBverify function...
+  This will:
+  1. Verify LSAG signature
+  2. Check for double registration
+  3. Add to registration table
+
+⏳ Transaction submitted: 0x99b1a2fe2adcbb59c99b6db4f03922fb982d2d34b07f5ea28f5d0125ee9a01a9
+  Waiting for confirmation...
+
+✅ Transaction confirmed!
+  Block: 57
+  Gas used: 9399573
+
+🎉 Registration Successful!
+  Registration Index (kv): 2
+  Voter Public Key: 0xa5d8902e787799b931...
+
+💾 Registration result saved to: /home/virtualvasu/Desktop/evoting_project/evoting-LSAG-v2/scripts/config/registration_result_12345555.json
+
+======================================================================
+✅ BB.verify Registration Complete!
+   Voter: test voter 2 (12345555)
+   Registration Index (kv): 2
+   New Public Key: 0xa5d8902e787799b931...
+======================================================================

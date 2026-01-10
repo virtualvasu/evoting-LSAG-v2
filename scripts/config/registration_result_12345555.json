@@ -1,0 +1,11 @@
+{
+  "voterName": "test voter 2",
+  "sid": "12345555",
+  "electionId": "election_001",
+  "registrationIndex": "2",
+  "newPublicKey": "0xa5d8902e787799b931d8648b118ab7972ed8956da65600e50d249c3bd746099838a2a31a88ec505d0f82e7ca70cb4754dd269ea8543163c38f45ee4ec6106d67",
+  "transactionHash": "0x99b1a2fe2adcbb59c99b6db4f03922fb982d2d34b07f5ea28f5d0125ee9a01a9",
+  "blockNumber": 57,
+  "gasUsed": "9399573",
+  "timestamp": "2026-01-09T13:00:11.055Z"
+}

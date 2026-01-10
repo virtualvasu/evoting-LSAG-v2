@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { ethers } = require('hardhat');
 const CryptoUtils = require('../utils/crypto-utils');
-const RealLSAG = require('../utils/real-lsag');
+const { generateSimpleLSAG, bigIntToBuffer } = require('../utils/simple-lsag');
 
 /**
  * Generate LSAG signature for voter
@@ -113,34 +113,59 @@ async function generateLSAGSignature(originalPrivateKey, registeredPublicKey, vo
         console.log(`  ✓ Using ORIGINAL private key for LSAG signature`);
         console.log(`  ✓ Signing election ID: ${electionId}`);
 
-        // Generate LSAG signature
-        const lsagSignature = RealLSAG.generateSignature(
-            messageBuffer,
-            originalPrivateKeyBuffer,
-            registeredPublicKeyBuffer,
-            voterRing,
+        // Convert ring to format needed for LSAG generator
+        const ring = voterRing.map(pkHex => {
+            const pkClean = pkHex.startsWith('0x') ? pkHex.slice(2) : pkHex;
+            const pkBuffer = Buffer.from(pkClean, 'hex');
+            // Extract x and y coordinates (32 bytes each)
+            const x = BigInt('0x' + pkBuffer.slice(0, 32).toString('hex'));
+            const y = BigInt('0x' + pkBuffer.slice(32, 64).toString('hex'));
+            return { x, y };
+        });
+
+        // Convert private key to BigInt
+        const privateKeyBigInt = BigInt(originalPrivateKey);
+        
+        // Get public key coordinates
+        const pubKeyClean = registeredPublicKey.startsWith('0x') ? registeredPublicKey.slice(2) : registeredPublicKey;
+        const pubKeyBuffer = Buffer.from(pubKeyClean, 'hex');
+        const publicKey = {
+            x: BigInt('0x' + pubKeyBuffer.slice(0, 32).toString('hex')),
+            y: BigInt('0x' + pubKeyBuffer.slice(32, 64).toString('hex'))
+        };
+
+        // Convert election ID to number
+        const electionIdNum = ethers.keccak256(ethers.toUtf8Bytes(electionId));
+        const electionIdBigInt = BigInt(electionIdNum);
+
+        // Generate LSAG signature using simple LSAG implementation
+        const lsagSignature = generateSimpleLSAG(
+            electionIdBigInt,
+            privateKeyBigInt,
+            publicKey,
+            ring,
             signerIndex
         );
 
         console.log(`  ✓ LSAG signature generated`);
-        console.log(`  Key Image: ${lsagSignature.keyImage.substring(0, 20)}...`);
+        console.log(`  Key Image X: 0x${lsagSignature.keyImageX.toString(16)}`);
+        console.log(`  Key Image Y: 0x${lsagSignature.keyImageY.toString(16)}`);
+        console.log(`  Challenge c[0]: 0x${lsagSignature.c0.toString(16)}`);
+        console.log(`  Responses: ${lsagSignature.s.length} values`);
 
         // Step 4: Prepare result
         const result = {
             voterName: voterName,
             sid: sid,
             electionId: electionId,
+            electionIdHash: electionIdNum,
             newPublicKey: newPublicKeyHex,
             newPrivateKey: newPrivateKeyHex,
             lsagSignature: {
-                c: lsagSignature.c.map(val => '0x' + val.toString(16).padStart(64, '0')),
-                s: lsagSignature.s.map(val => '0x' + val.toString(16).padStart(64, '0')),
-                keyImage: lsagSignature.keyImage.startsWith('0x')
-                    ? lsagSignature.keyImage
-                    : '0x' + (typeof lsagSignature.keyImage === 'string' ? lsagSignature.keyImage : Buffer.from(lsagSignature.keyImage).toString('hex')),
-                message: '0x' + (typeof lsagSignature.message === 'string' ? lsagSignature.message.startsWith('0x') ? lsagSignature.message.slice(2) : lsagSignature.message : lsagSignature.message.toString('hex')),
-                ringX: lsagSignature.ringX,
-                ringY: lsagSignature.ringY
+                keyImageX: '0x' + lsagSignature.keyImageX.toString(16).padStart(64, '0'),
+                keyImageY: '0x' + lsagSignature.keyImageY.toString(16).padStart(64, '0'),
+                c: '0x' + lsagSignature.c0.toString(16).padStart(64, '0'),  // c0 maps to c in Solidity
+                s: lsagSignature.s.map(val => '0x' + val.toString(16).padStart(64, '0'))
             }
         };
 
@@ -161,7 +186,8 @@ async function generateLSAGSignature(originalPrivateKey, registeredPublicKey, vo
         console.log(`   Voter: ${voterName} (${sid})`);
         console.log(`   Election ID: ${electionId}`);
         console.log(`   New Public Key: ${newPublicKeyHex.substring(0, 20)}...`);
-        console.log(`   Signature Key Image: ${lsagSignature.keyImage.substring(0, 20)}...`);
+        console.log(`   Key Image X: 0x${lsagSignature.keyImageX.toString(16).substring(0, 16)}...`);
+        console.log(`   Key Image Y: 0x${lsagSignature.keyImageY.toString(16).substring(0, 16)}...`);
         console.log('='.repeat(70) + '\n');
 
         return result;
@@ -171,7 +197,6 @@ async function generateLSAGSignature(originalPrivateKey, registeredPublicKey, vo
         throw error;
     }
 }
-
 // Main execution
 if (require.main === module) {
     const args = process.argv.slice(2);

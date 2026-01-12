@@ -83,6 +83,17 @@ async function submitLSAGRegistration(lsagFilePath) {
         console.log(`  2. Check for double registration`);
         console.log(`  3. Add to registration table`);
 
+        // Try to estimate gas first
+        console.log(`\n⛽ Estimating gas...`);
+        try {
+            const estimatedGas = await contract.BBverify.estimateGas(electionId, lsagSignature, newPublicKey);
+            console.log(`  Estimated gas: ${estimatedGas.toString()}`);
+        } catch (error) {
+            console.log(`  ⚠️  Gas estimation failed: ${error.message}`);
+            console.log(`  This usually means the transaction would revert.`);
+            console.log(`  Attempting to call with high gas limit anyway...`);
+        }
+
         const tx = await contract.BBverify(electionId, lsagSignature, newPublicKey, {
             gasLimit: 30000000 // Max gas limit for private chain
         });

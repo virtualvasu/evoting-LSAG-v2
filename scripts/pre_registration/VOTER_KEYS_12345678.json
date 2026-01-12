@@ -1,0 +1,14 @@
+{
+  "name": "Alice Smith",
+  "address": "0x28F06CEce31d00EBDd13484d99f2a53FD758514A",
+  "publicKey": "0x90c6ba42a30149d5b3d2b347024795655a88cce504b6fb215fa3bd55913c67d2e79d69091b7b4201261ffe8fd6101ad5df19c2d16ce7870159dcdad6b9c42bca",
+  "privateKey": "0xc2ce79f7580f9b94d2177cbb7d0fc939867b47f20feeb909d73da95626addc80",
+  "studentId": "12345678",
+  "createdAt": "2026-01-11T12:00:53.948Z",
+  "voterRing": [
+    "0x97eb6dd795a701a8ee2d084828f06cece31d00ebdd13484d99f2a53fd758514a"
+  ],
+  "ringPosition": "0",
+  "ringSize": "1",
+  "updatedAt": "2026-01-11T12:12:14.291Z"
+}

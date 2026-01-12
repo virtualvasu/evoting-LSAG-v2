@@ -1,0 +1,11 @@
+{
+  "voterName": "Alice Smith",
+  "sid": "12345678",
+  "electionId": "election_001",
+  "registrationIndex": "0",
+  "newPublicKey": "0x126b06eb471ad9f9b3055337cdf2af6379ef3058c8155321a2decd5f5cfb94f9b396b86f440948aabdee0df8208f875690ea2fc8379667c6a9497fd9d7edf254",
+  "transactionHash": "0x80bdb47f71a7235fd11fdadb7990dfd949498e6fa88a49c747ed4c6338446f56",
+  "blockNumber": 14,
+  "gasUsed": "3309569",
+  "timestamp": "2026-01-11T12:12:51.138Z"
+}

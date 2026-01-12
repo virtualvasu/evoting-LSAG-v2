@@ -1,11 +1,11 @@
 {
-  "contractAddress": "0x998abeb3E57409262aE5b751f60747921B33613E",
-  "setupTime": "2026-01-09T12:11:35.604Z",
+  "contractAddress": "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e",
+  "setupTime": "2026-01-11T12:12:00.000Z",
   "network": "localhost",
   "chainId": "31337",
   "note": "EVoting with Simple LSAG implementation - forward-chaining verification",
-  "secp256k1Address": "0xc3e53F4d16Ae77Db1c982e75a937B9f60FE63690",
-  "secp256k1DeployedAt": "2026-01-09T11:04:55.103Z",
-  "evotingAddress": "0x998abeb3E57409262aE5b751f60747921B33613E",
-  "evotingDeployedAt": "2026-01-09T12:11:35.604Z"
+  "secp256k1Address": "0x610178dA211FEF7D417bC0e6FeD39F05609AD788",
+  "secp256k1DeployedAt": "2026-01-11T12:11:31.272Z",
+  "evotingAddress": "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e",
+  "evotingDeployedAt": "2026-01-11T12:12:00.000Z"
 }

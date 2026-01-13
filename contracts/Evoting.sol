@@ -5,38 +5,23 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./MessageHashUtils.sol";
 import "./ECOperations.sol";
 
+interface ISecp256k1 {
+    function ScalarMult(uint256 px, uint256 py, uint256 scalar) external view returns(uint256 qx, uint256 qy);
+    function ScalarBaseMult(uint256 scalar) external view returns(uint256 qx, uint256 qy);
+    function HashToPoint(uint256 x1, uint256 y1) external view returns (uint256 qx, uint256 qy);
+    function Add(uint256 x1, uint256 y1, uint256 x2, uint256 y2) external view returns (uint256 x3, uint256 y3);
+}
+
 contract EVoting {
     using ECDSA for bytes32;
     using ECOperations for *;
+    
+    ISecp256k1 public secp256k1;
 
     // Structure to store voter's public key
     struct VoterPublicKey {
         bytes publicKey;
         bool exists;
-    }
-
-    // Structure to store vote
-    struct Vote {
-        bytes32 hashValue;
-        bytes hashedVote;
-        bool exists;
-    }
-
-    // Structure to store tally results
-    struct TallyResult {
-        bytes candidate;
-        bytes randomness;
-        bool exists;
-    }
-
-    // LSAG Signature structure - Now stores actual cryptographic components
-    struct LSAGSignature {
-        bytes32[] c;              // Array of challenges for each ring member
-        bytes32[] s;              // Array of responses for each ring member
-        bytes keyImage;           // Key image (linking tag): I = x * H_p(P) - 33 bytes compressed point
-        bytes message;            // Original message being signed
-        uint256[] ringX;          // X coordinates of ring public keys
-        uint256[] ringY;          // Y coordinates of ring public keys
     }
 
     // Certificate structure: CERT_v = {σ̃_v, P_ugov, P_uv, voterName, sid}
@@ -48,31 +33,46 @@ contract EVoting {
         string sid;            // Student/Voter ID
     }
 
-    // Mappings
-    mapping(bytes => VoterPublicKey) public publicKeys;
-    mapping(bytes => Vote) public votes;
-    mapping(bytes => TallyResult) public tallyResults;
-    mapping(bytes32 => bool) public usedLinkingTags;
-    mapping(bytes32 => bytes32[]) public registeredRings;
-
-    // T array structure for storing verified registrations: T[j] = (σ_vu, P_vu)
-    struct RegistrationEntry {
-        bytes sigma_vu;
-        bytes P_vu;
-        bool exists;
+    // LSAG Signature structure
+    struct LSAGSignature {
+        uint256 keyImageX;     // Ix - key image x coordinate
+        uint256 keyImageY;     // Iy - key image y coordinate
+        uint256 c;             // initial challenge
+        uint256[] s;           // response array (one per ring member)
     }
 
-    RegistrationEntry[] public T;
-    mapping(bytes32 => uint256) public registrationIndex;
+    // Registration table entry: T[k] = (σv, Pu', h_v)
+    struct RegistrationEntry {
+        LSAGSignature lsagSig; // T[k][0] - LSAG signature
+        bytes publicKey;        // T[k][1] - Voter's public key (Pu')
+        bytes32 voteHash;       // T[k][2] - Vote hash h_v (0 if not voted)
+    }
+
+    // Mappings
+    mapping(bytes => VoterPublicKey) public publicKeys;
+    
+    // Voter ring storage
     bytes32[] public voterRing;
     mapping(bytes32 => bytes) public hashToPublicKey;  // Map hash to actual public key
 
+    // Registration table T: stores LSAG signatures and corresponding public keys
+    RegistrationEntry[] public registrationTable;
+
+    // Results R[c]: maps candidate to vote count
+    mapping(bytes1 => uint256) public results;
+
     // Events
     event PublicKeyStored(bytes signature, bytes publicKey);
-    event VoterVerified(bytes sigma_vu, bytes P_vu);
-    event RegistrationAdded(uint256 indexed registrationIndex, bytes sigma_vu, bytes P_vu);
-    event VoteCast(bytes signature, bytes32 hashValue);
-    event TallyCounted(bytes voterKey, bytes candidate);
+    event RegistrationSuccess(uint256 indexed kv, bytes publicKey);
+    event RegistrationFailed(string reason);
+    event VoteCasted(uint256 indexed kv, bytes32 indexed voteHash);
+    event VoteTallied(uint256 indexed kv, bytes1 indexed candidate);
+
+    // Constructor
+    constructor(address _secp256k1) {
+        require(_secp256k1 != address(0), "Invalid Secp256k1 address");
+        secp256k1 = ISecp256k1(_secp256k1);
+    }
 
     // -------- REGISTRATION PHASE -------- //
 
@@ -123,376 +123,21 @@ contract EVoting {
         return address(uint160(uint256(pubKeyHash)));
     }
 
-    // ---------- LSAG and rest ---------- //
-
-    function isValidECPoint(bytes memory point) internal pure returns (bool) {
-        if (point.length != 64) return false;
-        bytes32 x;
-        bytes32 y;
-        assembly {
-            x := mload(add(point, 32))
-            y := mload(add(point, 64))
-        }
-        if (x == 0 && y == 0) return false;
-        return isValidSecp256k1Point(x, y);
-    }
-
-    function isValidSecp256k1Point(bytes32 x, bytes32 y) internal pure returns (bool) {
-        uint256 p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F;
-        uint256 x_coord = uint256(x);
-        uint256 y_coord = uint256(y);
-        if (x_coord >= p || y_coord >= p) return false;
-        uint256 left_side = mulmod(y_coord, y_coord, p);
-        uint256 x_squared = mulmod(x_coord, x_coord, p);
-        uint256 x_cubed = mulmod(x_squared, x_coord, p);
-        uint256 right_side = addmod(x_cubed, 7, p);
-        return left_side == right_side;
-    }
-
+    // Helper getters
     function getVoterRing() public view returns (bytes32[] memory) {
         return voterRing;
     }
 
-    function verify(
-        bytes memory sigma_vu,
-        bytes memory P_vu,
-        bytes memory keyImage  // NEW: actual key image for linkability
-    ) public returns (bool) {
-        bytes memory message = "VOTER_REGISTRATION";
-        
-        // Parse the LSAG signature (expects specific binary format)
-        LSAGSignature memory lsagSig = parseLSAGSignature(sigma_vu);
-        
-        // Populate ring from stored public keys
-        uint256 ringSize = voterRing.length;
-        lsagSig.ringX = new uint256[](ringSize);
-        lsagSig.ringY = new uint256[](ringSize);
-        
-        for (uint256 i = 0; i < ringSize; i++) {
-            bytes32 pkHash = voterRing[i];
-            bytes memory pk = hashToPublicKey[pkHash];
-            require(pk.length == 64, "Invalid stored public key length");
-            
-            // Parse uncompressed public key (64 bytes: 32 bytes x + 32 bytes y)
-            uint256 x;
-            uint256 y;
-            assembly {
-                x := mload(add(pk, 32))  // First 32 bytes
-                y := mload(add(pk, 64))  // Second 32 bytes
+    function getRingSize() public view returns (uint256) {
+        return voterRing.length;
+    }
+
+    function isPublicKeyInRing(bytes memory publicKey) public view returns (bool) {
+        bytes32 pubKeyHash = keccak256(publicKey);
+        for (uint256 i = 0; i < voterRing.length; i++) {
+            if (voterRing[i] == pubKeyHash) {
+                return true;
             }
-            lsagSig.ringX[i] = x;
-            lsagSig.ringY[i] = y;
-        }
-        
-        // Verify the signature is valid
-        require(lsagVer(P_vu, lsagSig, message), "Invalid LSAG signature");
-        
-        // Check if this key image was already used (prevents double voting)
-        bytes32 keyImageHash = keccak256(keyImage);
-        require(!usedLinkingTags[keyImageHash], "Key image already used - double registration");
-        
-        // Mark key image as used
-        usedLinkingTags[keyImageHash] = true;
-        
-        // Store registration
-        uint256 newIndex = T.length;
-        T.push(RegistrationEntry({
-            sigma_vu: sigma_vu,
-            P_vu: P_vu,
-            exists: true
-        }));
-        
-        bytes32 sigHash = keccak256(sigma_vu);
-        registrationIndex[sigHash] = newIndex;
-        publicKeys[sigma_vu] = VoterPublicKey({ publicKey: P_vu, exists: true });
-        bytes32 pubKeyHash = keccak256(P_vu);
-        voterRing.push(pubKeyHash);
-        hashToPublicKey[pubKeyHash] = P_vu;  // Store mapping
-        
-        emit VoterVerified(sigma_vu, P_vu);
-        emit RegistrationAdded(newIndex, sigma_vu, P_vu);
-        
-        return true;
-    }
-
-    function parseLSAGSignature(bytes memory sigma_vu) 
-        internal pure returns (LSAGSignature memory) 
-    {
-        /**
-         * Binary format from JavaScript:
-         * - All c values (32 bytes each): c[0], c[1], ..., c[n-1]
-         * - All s values (32 bytes each): s[0], s[1], ..., s[n-1]
-         * - Key image (33 bytes): compressed EC point
-         * 
-         * Total: (32 * n) + (32 * n) + 33 = 64*n + 33 bytes
-         */
-        require(sigma_vu.length >= 97, "Signature too short"); // min: c[0] + s[0] + keyImage (32+32+33)
-        require((sigma_vu.length - 33) % 64 == 0, "Invalid signature length");
-        
-        uint256 n = (sigma_vu.length - 33) / 64; // ring size
-        
-        LSAGSignature memory sig;
-        sig.c = new bytes32[](n);
-        sig.s = new bytes32[](n);
-        sig.message = bytes("VOTER_REGISTRATION");
-        
-        uint256 offset = 0;
-        
-        // Parse c values
-        for (uint256 i = 0; i < n; i++) {
-            bytes32 c_i;
-            assembly {
-                c_i := mload(add(add(sigma_vu, 32), offset))
-            }
-            sig.c[i] = c_i;
-            offset += 32;
-        }
-        
-        // Parse s values
-        for (uint256 i = 0; i < n; i++) {
-            bytes32 s_i;
-            assembly {
-                s_i := mload(add(add(sigma_vu, 32), offset))
-            }
-            sig.s[i] = s_i;
-            offset += 32;
-        }
-        
-        // Parse key image (last 33 bytes)
-        sig.keyImage = new bytes(33);
-        for (uint256 i = 0; i < 33; i++) {
-            sig.keyImage[i] = sigma_vu[offset + i];
-        }
-        
-        return sig;
-    }
-
-    function lsagVer(
-        bytes memory publicKey,
-        LSAGSignature memory signature,
-        bytes memory message
-    ) internal view returns (bool) {
-        /**
-         * Real LSAG Verification using elliptic curve precompiles
-         * 
-         * Verify the ring equation:
-         * For each position i in the ring:
-         *   L_i = [s_i]G + [c_i]P_i
-         *   R_i = [s_i]H_p(P_i) + [c_i]I
-         *   c_{i+1} = H(m || L_i || R_i)
-         * 
-         * If the ring closes (c_0 computed at end matches c_0 from signature), signature is valid
-         */
-        
-        require(signature.c.length > 0, "Signature missing challenges");
-        require(signature.s.length == signature.c.length, "Mismatched c and s lengths");
-        require(signature.keyImage.length == 33, "Invalid key image length");
-        
-        uint256 n = signature.c.length;
-        bytes32 messageHash = keccak256(message);
-        
-        // Parse key image (compressed point, 33 bytes)
-        (uint256 Ix, uint256 Iy) = decompressPoint(signature.keyImage);
-        require(Ix != 0 || Iy != 0, "Invalid key image");
-        
-        // Parse public keys from ring (stored as X,Y coordinates in signature)
-        require(signature.ringX.length == n, "Ring X mismatch");
-        require(signature.ringY.length == n, "Ring Y mismatch");
-        
-        // Verify ring equation
-        bytes32 computedC = signature.c[0];
-        
-        for (uint256 i = 0; i < n; i++) {
-            // Extract signature components
-            uint256 c_i = uint256(signature.c[i]);
-            uint256 s_i = uint256(signature.s[i]);
-            
-            // Compute L_i = [s_i]G + [c_i]P_i
-            (uint256 Li_x, uint256 Li_y) = ECOperations.ecLinComb(
-                ECOperations.GX, ECOperations.GY, s_i,
-                signature.ringX[i], signature.ringY[i], c_i
-            );
-            
-            // Compute H_p(P_i) - hash point for this ring member
-            // In production, this must match the JavaScript implementation
-            (uint256 Hp_x, uint256 Hp_y) = hashToPoint(
-                abi.encodePacked(signature.ringX[i], signature.ringY[i])
-            );
-            
-            // Compute R_i = [s_i]H_p(P_i) + [c_i]I
-            (uint256 Ri_x, uint256 Ri_y) = ECOperations.ecLinComb(
-                Hp_x, Hp_y, s_i,
-                Ix, Iy, c_i
-            );
-            
-            // Compute c_{i+1} = H(m || L_i || R_i)
-            bytes32 nextC = keccak256(abi.encodePacked(
-                messageHash,
-                Li_x, Li_y,
-                Ri_x, Ri_y
-            ));
-            
-            computedC = nextC;
-            
-            // If we've completed the ring, check if it closes
-            if (i == n - 1) {
-                // Final check: computed c should match signature.c[0]
-                return uint256(computedC) == uint256(signature.c[0]);
-            }
-        }
-        
-        return false;
-    }
-
-    /**
-     * @dev Decompress a compressed elliptic curve point (33 bytes)
-     * Format: 0x02 or 0x03 prefix + 32 bytes of x-coordinate
-     * Returns the (x, y) coordinates
-     */
-    function decompressPoint(bytes memory compressedPoint)
-        internal view returns (uint256 x, uint256 y)
-    {
-        require(compressedPoint.length == 33, "Invalid compressed point length");
-        
-        // Extract prefix and x-coordinate
-        uint8 prefix;
-        assembly {
-            prefix := byte(0, mload(add(compressedPoint, 32)))
-        }
-        
-        // Extract x coordinate (32 bytes) - skip first byte (prefix)
-        bytes32 xBytes;
-        assembly {
-            xBytes := mload(add(compressedPoint, 33))
-        }
-        x = uint256(xBytes);
-        
-        // Compute y^2 = x^3 + 7 (mod p)
-        uint256 p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F;
-        uint256 y_squared = addmod(
-            mulmod(mulmod(x, x, p), x, p),
-            7,
-            p
-        );
-        
-        // Compute square root using Tonelli-Shanks or similar
-        // For secp256k1, we can use: y = y_squared^((p+1)/4) mod p
-        uint256 exponent = (p + 1) / 4;
-        y = modpow(y_squared, exponent, p);
-        
-        // Check if we need the other root
-        uint8 expectedPrefix = uint8((y & 1) == 0 ? 2 : 3);
-        if (expectedPrefix != prefix) {
-            y = p - y; // Take the other root
-        }
-        
-        return (x, y);
-    }
-
-    /**
-     * @dev Compute y = base^exp mod modulus
-     * Uses the MODEXP precompile for efficiency
-     */
-    function modpow(uint256 base, uint256 exponent, uint256 modulus)
-        internal view returns (uint256 result)
-    {
-        assembly {
-            let freemem := mload(0x40)
-            mstore(freemem, 32)            // base length
-            mstore(add(freemem, 32), 32)   // exp length
-            mstore(add(freemem, 64), 32)   // mod length
-            mstore(add(freemem, 96), base)
-            mstore(add(freemem, 128), exponent)
-            mstore(add(freemem, 160), modulus)
-            
-            if iszero(staticcall(gas(), 0x05, freemem, 0xc0, freemem, 0x20)) {
-                revert(0, 0)
-            }
-            result := mload(freemem)
-        }
-    }
-
-    /**
-     * @dev Hash data to a point on the curve
-     * Uses a deterministic approach with counter
-     * This must match the JavaScript implementation
-     */
-    function hashToPoint(bytes memory data)
-        internal pure returns (uint256 x, uint256 y)
-    {
-        // Simplified version - in production, implement full hash-to-point
-        // with curve equation verification
-        bytes32 hash = keccak256(data);
-        x = uint256(hash);
-        
-        // For now, return a deterministic point
-        // Full implementation would solve the curve equation
-        y = uint256(keccak256(abi.encodePacked(hash, uint8(1))));
-        
-        return (x, y);
-    }
-
-    function voting(
-        bytes memory sigma_v_prime,
-        bytes32 h_v,
-        bytes memory k_v
-    ) public {
-        require(publicKeys[sigma_v_prime].exists, "Voter not registered");
-        require(!votes[sigma_v_prime].exists, "Vote already cast");
-        bytes memory storedPubKey = publicKeys[sigma_v_prime].publicKey;
-        require(pksVerifySignature(h_v, storedPubKey, k_v), "PKS signature verification failed");
-        votes[sigma_v_prime] = Vote({ hashValue: h_v, hashedVote: k_v, exists: true });
-        emit VoteCast(sigma_v_prime, h_v);
-    }
-
-    function pksVerifySignature(
-        bytes32 message,
-        bytes memory publicKey,
-        bytes memory signature
-    ) internal pure returns (bool) {
-    if (signature.length != 65 || publicKey.length != 64) return false;
-    bytes32 ethHash = MessageHashUtils.toEthSignedMessageHash(message);
-    address recovered = ECDSA.recover(ethHash, signature);
-    address derived = deriveAddressFromPubKey(publicKey);
-    return recovered == derived;
-    }
-
-    function tally(
-        bytes memory c,
-        bytes memory r,
-        bytes memory k_v
-    ) public {
-        require(votes[k_v].exists, "No vote found for this voter key");
-        require(!tallyResults[k_v].exists, "Vote already tallied");
-        bytes32 computedHash = keccak256(abi.encodePacked(c, r));
-        bytes32 storedHash = votes[k_v].hashValue;
-        require(computedHash == storedHash, "Vote integrity check failed - H(c||r) mismatch");
-        tallyResults[k_v] = TallyResult({ candidate: c, randomness: r, exists: true });
-        emit TallyCounted(k_v, c);
-    }
-
-    // Helper getters
-    function hasVoted(bytes memory voterKey) public view returns (bool) {
-        return votes[voterKey].exists;
-    }
-
-    function isTallied(bytes memory voterKey) public view returns (bool) {
-        return tallyResults[voterKey].exists;
-    }
-
-    function getTotalRegistrations() public view returns (uint256) {
-        return T.length;
-    }
-
-    function getRegistration(uint256 index) public view returns (RegistrationEntry memory) {
-        require(index < T.length, "Registration index out of bounds");
-        return T[index];
-    }
-
-    function isSignatureRegistered(bytes memory sigma_vu) public view returns (bool) {
-        bytes32 sigHash = keccak256(sigma_vu);
-        if (registrationIndex[sigHash] < T.length) {
-            return T[registrationIndex[sigHash]].exists;
         }
         return false;
     }
@@ -513,42 +158,6 @@ contract EVoting {
         });
     }
 
-    function isLinkingTagUsed(bytes32 linkingTag) public view returns (bool) {
-        return usedLinkingTags[linkingTag];
-    }
-
-    function getRingSize() public view returns (uint256) {
-        return voterRing.length;
-    }
-
-    function isPublicKeyInRing(bytes memory publicKey) public view returns (bool) {
-        bytes32 pubKeyHash = keccak256(publicKey);
-        for (uint256 i = 0; i < voterRing.length; i++) {
-            if (voterRing[i] == pubKeyHash) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    function createLSAGSignature(
-        bytes32[] memory c,
-        bytes32[] memory s,
-        bytes memory keyImage,
-        bytes memory message,
-        uint256[] memory ringX,
-        uint256[] memory ringY
-    ) public pure returns (LSAGSignature memory) {
-        return LSAGSignature({
-            c: c,
-            s: s,
-            keyImage: keyImage,
-            message: message,
-            ringX: ringX,
-            ringY: ringY
-        });
-    }
-
     /**
      * Get all registered public keys in the ring
      * Returns array of public keys in same order as voterRing hashes
@@ -562,7 +171,366 @@ contract EVoting {
         
         return pubKeys;
     }
-}
 
-//todo: revise the voting part by encrypting c and r with the pressiding officer's public key and storing voting phase 
-//todo: use zk proof for the proof of authenticity of private key of presiding officer
+    // -------- LSAG VERIFICATION PHASE -------- //
+
+    /**
+     * @dev Hash a point to another point on the curve (deterministic)
+     * H(P) for key image computation
+     * @param Px X coordinate of point P
+     * @param Py Y coordinate of point P
+     * @return Hx X coordinate of H(P)
+     * @return Hy Y coordinate of H(P)
+     */
+    function hashToPoint(uint256 Px, uint256 Py) internal view returns (uint256 Hx, uint256 Hy) {
+        // Hash the point coordinates
+        bytes32 hash = keccak256(abi.encodePacked(Px, Py));
+        uint256 scalar = uint256(hash) % ECOperations.getOrder();
+        
+        // Ensure scalar is not zero
+        if (scalar == 0) {
+            scalar = 1;
+        }
+        
+        // Multiply generator by the hash scalar: H(P) = [hash(P)]G
+        (Hx, Hy) = ECOperations.ecMulG(scalar);
+        
+        // Validate the resulting point is on curve
+        require(ECOperations.isValidPoint(Hx, Hy), "HashToPoint produced invalid point");
+        
+        return (Hx, Hy);
+    }
+
+    /**
+     * @dev LSAG.ver - Verify LSAG signature (SIMPLE VERSION)
+     * @param electionId Election identifier
+     * @param lsagSig LSAG signature containing key image, c (c[0]), and s array
+     * @return bool True if signature is valid, false otherwise
+     * 
+     * Simple forward-chaining: c[0] -> c[1] -> c[2] -> ... -> c[0]
+     */
+    function LSAGver(
+        uint256 electionId,
+        LSAGSignature memory lsagSig
+    ) public view returns (bool) {
+        uint256 ringSize = voterRing.length;
+        
+        // Signature must have response for each ring member
+        require(lsagSig.s.length == ringSize, "Invalid signature length");
+        
+        if (ringSize == 0) return false;
+        
+        // Start with c[0] from signature
+        uint256 currentChallenge = lsagSig.c;
+        uint256 Lix;
+        uint256 Liy;
+        uint256 Rix;
+        uint256 Riy;
+        
+        // Loop through entire ring
+        for (uint256 i = 0; i < ringSize; i++) {
+            // Get public key for this ring member
+            bytes memory pubKeyBytes = hashToPublicKey[voterRing[i]];
+            require(pubKeyBytes.length == 64, "Invalid public key length");
+            
+            // Extract coordinates
+            uint256 Pix;
+            uint256 Piy;
+            assembly {
+                Pix := mload(add(pubKeyBytes, 32))
+                Piy := mload(add(pubKeyBytes, 64))
+            }
+            
+            // Compute L = [s[i]]G + [c[i]]P[i]
+            (Lix, Liy) = _computeL(lsagSig.s[i], Pix, Piy, currentChallenge);
+            
+            // Compute R = [s[i]]H(P[i]) + [c[i]]I
+            (Rix, Riy) = _computeR(lsagSig.s[i], Pix, Piy, currentChallenge, lsagSig.keyImageX, lsagSig.keyImageY);
+            
+            // Compute next challenge: c[i+1] = H(electionId, L[i], R[i])
+            currentChallenge = uint256(keccak256(abi.encodePacked(electionId, Lix, Liy, Rix, Riy)));
+        }
+        
+        // After full loop, should arrive back at c[0]
+        return currentChallenge == lsagSig.c;
+    }
+    
+    /**
+     * @dev Helper function: compute L = [s]G + [c]P
+     */
+    function _computeL(
+        uint256 s,
+        uint256 Px,
+        uint256 Py,
+        uint256 c
+    ) internal view returns (uint256 Lx, uint256 Ly) {
+        uint256 x1;
+        uint256 x2;
+        uint256 x3;
+        uint256 x4;
+        
+        // [s]G
+        (x1, x2) = secp256k1.ScalarBaseMult(s);
+        // [c]P
+        (x3, x4) = secp256k1.ScalarMult(Px, Py, c);
+        // Add them
+        return secp256k1.Add(x1, x2, x3, x4);
+    }
+    
+    /**
+     * @dev Helper function: compute R = [s]H(P) + [c]I
+     */
+    function _computeR(
+        uint256 s,
+        uint256 Px,
+        uint256 Py,
+        uint256 c,
+        uint256 Ix,
+        uint256 Iy
+    ) internal view returns (uint256 Rx, uint256 Ry) {
+        uint256 t1;
+        uint256 t2;
+        uint256 x3;
+        uint256 x4;
+        
+        // H(P)
+        (t1, t2) = secp256k1.HashToPoint(Px, Py);
+        // [s]H(P)
+        (t1, t2) = secp256k1.ScalarMult(t1, t2, s);
+        // [c]I
+        (x3, x4) = secp256k1.ScalarMult(Ix, Iy, c);
+        // Add them
+        return secp256k1.Add(t1, t2, x3, x4);
+    }
+
+    /**
+     * @dev LSAG.linkVer - Check if two signatures are linked (from same signer)
+     * @param sig1 First LSAG signature
+     * @param sig2 Second LSAG signature
+     * @return bool True if signatures have same key image (linked), false otherwise
+     */
+    function LSAGlinkVer(
+        LSAGSignature memory sig1,
+        LSAGSignature memory sig2
+    ) public pure returns (bool) {
+        // Two signatures are linked if they have the same key image
+        return (sig1.keyImageX == sig2.keyImageX && sig1.keyImageY == sig2.keyImageY);
+    }
+
+    /**
+     * @dev BB.verify - Verify and register voter with LSAG signature
+     * Implements the BB.verify(σ, Pu') function from the paper
+     * @param electionId Election identifier (L)
+     * @param lsagSig LSAG signature (σv)
+     * @param voterPubKey Voter's public key (Pu')
+     * @return kv Registration index or revert on failure
+     */
+    function BBverify(
+        uint256 electionId,
+        LSAGSignature memory lsagSig,
+        bytes memory voterPubKey
+    ) public returns (uint256 kv) {
+        // Step 1: LSAG.ver(L, Pu, σv) = 1
+        require(LSAGver(electionId, lsagSig), "LSAG verification failed");
+        
+        // Step 2: Check for linkability with existing registrations
+        // if ∃ j ∈ {0,1,··· ,|T|−1}, LSAG.linkVer(Pu, L, L, σv, T[j][0]) = 1
+        for (uint256 j = 0; j < registrationTable.length; j++) {
+            if (LSAGlinkVer(lsagSig, registrationTable[j].lsagSig)) {
+                // abort registration
+                emit RegistrationFailed("Invalid Registration - signature already used");
+                revert("Invalid Registration - signature already used");
+            }
+        }
+        
+        // Step 3: Add to registration table
+        // k := |T|
+        kv = registrationTable.length;
+        
+        // T[k] := (σv, Pu', 0)
+        registrationTable.push(RegistrationEntry({
+            lsagSig: lsagSig,
+            publicKey: voterPubKey,
+            voteHash: bytes32(0)
+        }));
+        
+        emit RegistrationSuccess(kv, voterPubKey);
+        
+        return kv;
+    }
+
+    /**
+     * @dev BB.voting - Cast a vote by verifying voter's signature on vote hash
+     * Implements the BB.voting(σ, h, k) function
+     * @param k Registration index (k_v)
+     * @param h Vote hash (h_v)
+     * @param r Signature component r
+     * @param s Signature component s
+     * @param v Signature recovery byte (27 or 28)
+     * @return bool True if vote successfully cast
+     */
+    function BBvoting(
+        uint256 k,
+        bytes32 h,
+        bytes32 r,
+        bytes32 s,
+        uint8 v
+    ) public returns (bool) {
+        // Step 1: Validate registration index
+        require(k < registrationTable.length, "Invalid registration index");
+        
+        RegistrationEntry storage entry = registrationTable[k];
+        
+        // Step 2: Check if voter has already voted (prevent rewrites)
+        // T[k][2] should be 0 (not voted) to allow new vote
+        require(entry.voteHash == bytes32(0), "Voter has already voted");
+        
+        // Step 3: Get voter's public key from T[k][1]
+        bytes memory voterPubKey = entry.publicKey;
+        require(voterPubKey.length == 64, "Invalid voter public key");
+        
+        // Step 4: Verify PKS signature: PKS.ver(h, T[k][1], σ) = 1
+        address recoveredAddr = recoverSignature(h, r, s, v);
+        address expectedAddr = deriveAddressFromPubKey(voterPubKey);
+        
+        require(recoveredAddr == expectedAddr, "Invalid vote signature - verification failed");
+        
+        // Step 5: Store the vote hash in T[k][2]
+        entry.voteHash = h;
+        
+        // Step 6: Emit event
+        emit VoteCasted(k, h);
+        
+        return true;
+    }
+
+    /**
+     * @dev Helper function to recover address from signature components
+     * @param msgHash Message hash that was signed
+     * @param r Signature r component
+     * @param s Signature s component
+     * @param v Recovery byte (27 or 28)
+     * @return Recovered address
+     */
+    function recoverSignature(
+        bytes32 msgHash,
+        bytes32 r,
+        bytes32 s,
+        uint8 v
+    ) internal pure returns (address) {
+        // Reconstruct signature from components
+        bytes memory signature = abi.encodePacked(r, s, v);
+        
+        // Use ethers.js compatible recovery
+        bytes32 ethHash = MessageHashUtils.toEthSignedMessageHash(msgHash);
+        return ethHash.recover(signature);
+    }
+
+    /**
+     * @dev Get vote hash for a voter
+     * @param k Registration index
+     * @return Vote hash (0 if not voted)
+     */
+    function getVoteHash(uint256 k) public view returns (bytes32) {
+        require(k < registrationTable.length, "Invalid registration index");
+        return registrationTable[k].voteHash;
+    }
+
+    /**
+     * @dev Check if voter has voted
+     * @param k Registration index
+     * @return True if voter has cast a vote
+     */
+    function hasVoted(uint256 k) public view returns (bool) {
+        require(k < registrationTable.length, "Invalid registration index");
+        return registrationTable[k].voteHash != bytes32(0);
+    }
+
+    /**
+     * @dev Get registration table size
+     */
+    function getRegistrationTableSize() public view returns (uint256) {
+        return registrationTable.length;
+    }
+
+    /**
+     * @dev Get registration entry by index
+     */
+    function getRegistrationEntry(uint256 index) public view returns (
+        uint256 keyImageX,
+        uint256 keyImageY,
+        uint256 c,
+        uint256[] memory s,
+        bytes memory publicKey,
+        bytes32 voteHash
+    ) {
+        require(index < registrationTable.length, "Index out of bounds");
+        RegistrationEntry memory entry = registrationTable[index];
+        return (
+            entry.lsagSig.keyImageX,
+            entry.lsagSig.keyImageY,
+            entry.lsagSig.c,
+            entry.lsagSig.s,
+            entry.publicKey,
+            entry.voteHash
+        );
+    }
+
+    // -------- TALLYING PHASE -------- //
+
+    /**
+     * @dev BB.tally - Tally a vote for a candidate
+     * Verifies vote integrity and increments candidate count
+     * @param k Registration index (voter's k_v)
+     * @param c Candidate choice (A-E as bytes1)
+     * @param r Random number used in vote creation
+     */
+    function BBtally(uint256 k, bytes1 c, bytes memory r) public {
+        // Step 1: Validate registration index
+        require(k < registrationTable.length, "Invalid registration index");
+        
+        // Step 2: Validate candidate
+        require(c >= 'A' && c <= 'E', "Invalid candidate choice");
+        
+        // Step 3: Get stored vote hash from T[k][2]
+        bytes32 storedHash = registrationTable[k].voteHash;
+        require(storedHash != bytes32(0), "No vote found for this voter");
+        
+        // Step 4: Recalculate hash: H(c ∥ r)
+        bytes memory messageToHash = abi.encodePacked(c, r);
+        bytes32 calculatedHash = keccak256(messageToHash);
+        
+        // Step 5: Verify integrity: T[k][2] == H(c ∥ r)
+        require(storedHash == calculatedHash, "Vote integrity check failed");
+        
+        // Step 6: Increment result for candidate
+        results[c]++;
+        
+        // Step 7: Emit event
+        emit VoteTallied(k, c);
+    }
+
+    /**
+     * @dev Get vote count for a candidate
+     * @param c Candidate choice (A-E as bytes1)
+     * @return Vote count for candidate
+     */
+    function getVoteCount(bytes1 c) public view returns (uint256) {
+        require(c >= 'A' && c <= 'E', "Invalid candidate choice");
+        return results[c];
+    }
+
+    /**
+     * @dev Get all results
+     * @return Array of vote counts for candidates A-E
+     */
+    function getAllResults() public view returns (uint256[] memory) {
+        uint256[] memory counts = new uint256[](5);
+        counts[0] = results['A'];
+        counts[1] = results['B'];
+        counts[2] = results['C'];
+        counts[3] = results['D'];
+        counts[4] = results['E'];
+        return counts;
+    }
+}

@@ -10,7 +10,7 @@ async function setupExistingContract() {
     console.log('🔧 Setting up configuration for existing contract...\n');
 
     // Your deployed contract address
-    const contractAddress = '0x4ECFddFb3487b3Cc2C7d85cB6C5075Bf78dF919e';
+    const contractAddress = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
 
     try {
         // Create config directory if it doesn't exist

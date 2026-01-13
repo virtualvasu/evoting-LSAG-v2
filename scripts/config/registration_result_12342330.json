@@ -1,0 +1,11 @@
+{
+  "voterName": "vasu garg",
+  "sid": "12342330",
+  "electionId": "election_001",
+  "registrationIndex": "0",
+  "newPublicKey": "0xdd199e67bc5c97515f5d8cf00b0ef1f033e373432c74aff5c586574de9835ae6a935ec4b50115079721b496d09ef4557f6f551a78a745a29681d2283fb4d851d",
+  "transactionHash": "0x559cd06cfec96a6609be70bf789701d823e6ab96de07df5f8d1f5ef247267df3",
+  "blockNumber": 7077,
+  "gasUsed": "3261821",
+  "timestamp": "2026-01-13T19:13:36.060Z"
+}

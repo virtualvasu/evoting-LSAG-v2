@@ -1,0 +1,12 @@
+{
+  "kv": 0,
+  "candidateChoice": "C",
+  "r": "0x9e02f5080bfb54c2a8979e5f210045cf4355ac5e5b9e4bc30d7e7df5904bdd4f",
+  "h_v": "0xe66d6061a6480fadb35450aa9eccba40ddb4ea2179d8c1f88a762434f8fa19d6",
+  "sigma_v_prime": {
+    "r": "0xc05dcb61cc0f9082db4d28cb32ac562be0b322ecc583055eda4d951826728a2b",
+    "s": "0x235610d1f4f12ab9a04473d502c49329f90b0f9ce15d157c4faaa307fa7c17a3",
+    "v": 28
+  },
+  "timestamp": "2026-01-13T19:14:17.013Z"
+}

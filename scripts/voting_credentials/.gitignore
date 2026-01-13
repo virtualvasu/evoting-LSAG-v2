@@ -1,0 +1,5 @@
+# Voting credentials contain private keys - DO NOT COMMIT!
+*.json
+
+# Keep the directory structure
+!.gitignore

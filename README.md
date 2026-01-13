@@ -56,7 +56,7 @@ node scripts/registration_new/update_voter_ring.js scripts/pre_registration/CERT
 **Step 4: Generate LSAG Signature**
 ```bash
 ORIGINAL_PRIVATE_KEY=0x... REGISTERED_PUBLIC_KEY=0x... VOTER_NAME="..." VOTER_SID="..." \
-npx hardhat run scripts/registration_new/generate-lsag-signature.js --network localhost
+npx hardhat run scripts/registration_new/generate-lsag-signature.js --network iitbh
 ```
 **Output**: `LSAG_<sid>.json` (signature proving ring membership) ✅
 

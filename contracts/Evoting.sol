@@ -41,10 +41,11 @@ contract EVoting {
         uint256[] s;           // response array (one per ring member)
     }
 
-    // Registration table entry: T[k] = (σv, Pu')
+    // Registration table entry: T[k] = (σv, Pu', h_v)
     struct RegistrationEntry {
-        LSAGSignature lsagSig; // LSAG signature
-        bytes publicKey;        // Voter's public key (Pu')
+        LSAGSignature lsagSig; // T[k][0] - LSAG signature
+        bytes publicKey;        // T[k][1] - Voter's public key (Pu')
+        bytes32 voteHash;       // T[k][2] - Vote hash h_v (0 if not voted)
     }
 
     // Mappings
@@ -57,10 +58,15 @@ contract EVoting {
     // Registration table T: stores LSAG signatures and corresponding public keys
     RegistrationEntry[] public registrationTable;
 
+    // Results R[c]: maps candidate to vote count
+    mapping(bytes1 => uint256) public results;
+
     // Events
     event PublicKeyStored(bytes signature, bytes publicKey);
     event RegistrationSuccess(uint256 indexed kv, bytes publicKey);
     event RegistrationFailed(string reason);
+    event VoteCasted(uint256 indexed kv, bytes32 indexed voteHash);
+    event VoteTallied(uint256 indexed kv, bytes1 indexed candidate);
 
     // Constructor
     constructor(address _secp256k1) {
@@ -341,15 +347,103 @@ contract EVoting {
         // k := |T|
         kv = registrationTable.length;
         
-        // T[k] := (σv, Pu')
+        // T[k] := (σv, Pu', 0)
         registrationTable.push(RegistrationEntry({
             lsagSig: lsagSig,
-            publicKey: voterPubKey
+            publicKey: voterPubKey,
+            voteHash: bytes32(0)
         }));
         
         emit RegistrationSuccess(kv, voterPubKey);
         
         return kv;
+    }
+
+    /**
+     * @dev BB.voting - Cast a vote by verifying voter's signature on vote hash
+     * Implements the BB.voting(σ, h, k) function
+     * @param k Registration index (k_v)
+     * @param h Vote hash (h_v)
+     * @param r Signature component r
+     * @param s Signature component s
+     * @param v Signature recovery byte (27 or 28)
+     * @return bool True if vote successfully cast
+     */
+    function BBvoting(
+        uint256 k,
+        bytes32 h,
+        bytes32 r,
+        bytes32 s,
+        uint8 v
+    ) public returns (bool) {
+        // Step 1: Validate registration index
+        require(k < registrationTable.length, "Invalid registration index");
+        
+        RegistrationEntry storage entry = registrationTable[k];
+        
+        // Step 2: Check if voter has already voted (prevent rewrites)
+        // T[k][2] should be 0 (not voted) to allow new vote
+        require(entry.voteHash == bytes32(0), "Voter has already voted");
+        
+        // Step 3: Get voter's public key from T[k][1]
+        bytes memory voterPubKey = entry.publicKey;
+        require(voterPubKey.length == 64, "Invalid voter public key");
+        
+        // Step 4: Verify PKS signature: PKS.ver(h, T[k][1], σ) = 1
+        address recoveredAddr = recoverSignature(h, r, s, v);
+        address expectedAddr = deriveAddressFromPubKey(voterPubKey);
+        
+        require(recoveredAddr == expectedAddr, "Invalid vote signature - verification failed");
+        
+        // Step 5: Store the vote hash in T[k][2]
+        entry.voteHash = h;
+        
+        // Step 6: Emit event
+        emit VoteCasted(k, h);
+        
+        return true;
+    }
+
+    /**
+     * @dev Helper function to recover address from signature components
+     * @param msgHash Message hash that was signed
+     * @param r Signature r component
+     * @param s Signature s component
+     * @param v Recovery byte (27 or 28)
+     * @return Recovered address
+     */
+    function recoverSignature(
+        bytes32 msgHash,
+        bytes32 r,
+        bytes32 s,
+        uint8 v
+    ) internal pure returns (address) {
+        // Reconstruct signature from components
+        bytes memory signature = abi.encodePacked(r, s, v);
+        
+        // Use ethers.js compatible recovery
+        bytes32 ethHash = MessageHashUtils.toEthSignedMessageHash(msgHash);
+        return ethHash.recover(signature);
+    }
+
+    /**
+     * @dev Get vote hash for a voter
+     * @param k Registration index
+     * @return Vote hash (0 if not voted)
+     */
+    function getVoteHash(uint256 k) public view returns (bytes32) {
+        require(k < registrationTable.length, "Invalid registration index");
+        return registrationTable[k].voteHash;
+    }
+
+    /**
+     * @dev Check if voter has voted
+     * @param k Registration index
+     * @return True if voter has cast a vote
+     */
+    function hasVoted(uint256 k) public view returns (bool) {
+        require(k < registrationTable.length, "Invalid registration index");
+        return registrationTable[k].voteHash != bytes32(0);
     }
 
     /**
@@ -367,7 +461,8 @@ contract EVoting {
         uint256 keyImageY,
         uint256 c,
         uint256[] memory s,
-        bytes memory publicKey
+        bytes memory publicKey,
+        bytes32 voteHash
     ) {
         require(index < registrationTable.length, "Index out of bounds");
         RegistrationEntry memory entry = registrationTable[index];
@@ -376,7 +471,66 @@ contract EVoting {
             entry.lsagSig.keyImageY,
             entry.lsagSig.c,
             entry.lsagSig.s,
-            entry.publicKey
+            entry.publicKey,
+            entry.voteHash
         );
+    }
+
+    // -------- TALLYING PHASE -------- //
+
+    /**
+     * @dev BB.tally - Tally a vote for a candidate
+     * Verifies vote integrity and increments candidate count
+     * @param k Registration index (voter's k_v)
+     * @param c Candidate choice (A-E as bytes1)
+     * @param r Random number used in vote creation
+     */
+    function BBtally(uint256 k, bytes1 c, bytes memory r) public {
+        // Step 1: Validate registration index
+        require(k < registrationTable.length, "Invalid registration index");
+        
+        // Step 2: Validate candidate
+        require(c >= 'A' && c <= 'E', "Invalid candidate choice");
+        
+        // Step 3: Get stored vote hash from T[k][2]
+        bytes32 storedHash = registrationTable[k].voteHash;
+        require(storedHash != bytes32(0), "No vote found for this voter");
+        
+        // Step 4: Recalculate hash: H(c ∥ r)
+        bytes memory messageToHash = abi.encodePacked(c, r);
+        bytes32 calculatedHash = keccak256(messageToHash);
+        
+        // Step 5: Verify integrity: T[k][2] == H(c ∥ r)
+        require(storedHash == calculatedHash, "Vote integrity check failed");
+        
+        // Step 6: Increment result for candidate
+        results[c]++;
+        
+        // Step 7: Emit event
+        emit VoteTallied(k, c);
+    }
+
+    /**
+     * @dev Get vote count for a candidate
+     * @param c Candidate choice (A-E as bytes1)
+     * @return Vote count for candidate
+     */
+    function getVoteCount(bytes1 c) public view returns (uint256) {
+        require(c >= 'A' && c <= 'E', "Invalid candidate choice");
+        return results[c];
+    }
+
+    /**
+     * @dev Get all results
+     * @return Array of vote counts for candidates A-E
+     */
+    function getAllResults() public view returns (uint256[] memory) {
+        uint256[] memory counts = new uint256[](5);
+        counts[0] = results['A'];
+        counts[1] = results['B'];
+        counts[2] = results['C'];
+        counts[3] = results['D'];
+        counts[4] = results['E'];
+        return counts;
     }
 }

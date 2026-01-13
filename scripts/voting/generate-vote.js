@@ -48,18 +48,20 @@ async function generateVote(newPrivateKey, candidateChoice, kv) {
         console.log(`\n✓ Generated random number r`);
         console.log(`  r: ${rHex.substring(0, 20)}...`);
 
-        // Step 3: Calculate h_v = hash(c || r)
-        const messageToHash = Buffer.concat([Buffer.from(c, 'utf8'), r]);
-        const h_v = crypto.createHash('sha256').update(messageToHash).digest();
-        const h_vHex = '0x' + h_v.toString('hex');
-        console.log(`\n✓ Generated hash h_v = SHA256(c || r)`);
+        // Step 3: Calculate h_v = keccak256(c || r)
+        // Convert candidate to bytes1
+        const cByte = ethers.toBeHex(c.charCodeAt(0), 1);
+        const messageToHash = ethers.concat([cByte, rHex]);
+        const h_vHex = ethers.keccak256(messageToHash);
+        console.log(`\n✓ Generated hash h_v = keccak256(c || r)`);
         console.log(`  h_v: ${h_vHex}`);
 
         // Step 4: Sign h_v with new private key using PKS (Ethereum signing)
         const privateKeyHex = newPrivateKey.startsWith('0x') ? newPrivateKey : '0x' + newPrivateKey;
         
-        // Use CryptoUtils for consistent PKS signing
-        const signatureBuffer = CryptoUtils.signMessageHash(h_v, privateKeyHex);
+        // Convert hash string to bytes for signing
+        const h_vBytes = ethers.getBytes(h_vHex);
+        const signatureBuffer = CryptoUtils.signMessageHash(h_vBytes, privateKeyHex);
         
         const sigma_v_prime = {
             r: '0x' + signatureBuffer.slice(0, 32).toString('hex'),
@@ -126,13 +128,55 @@ if (require.main === module) {
     }
 
     generateVote(newPrivateKey, candidateChoice, parseInt(kv))
-        .then((voteData) => {
+        .then(async (voteData) => {
             // Save vote data to file
             const fileName = `vote_${Date.now()}.json`;
             const filePath = path.join(__dirname, '../config', fileName);
             fs.writeFileSync(filePath, JSON.stringify(voteData, null, 2));
             console.log(`\n📁 Vote saved to: ${filePath}`);
-            process.exit(0);
+
+            // Cast vote on-chain
+            console.log(`\n${'='.repeat(70)}`);
+            console.log('📡 Casting vote on-chain...');
+            
+            try {
+                // Load deployment config
+                const deploymentPath = path.join(__dirname, '../config/deployment.json');
+                const deployment = JSON.parse(fs.readFileSync(deploymentPath, 'utf8'));
+                
+                // Connect to contract
+                const provider = new ethers.JsonRpcProvider('http://10.10.0.60:8550');
+                const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+                const contract = new ethers.Contract(
+                    deployment.contractAddress,
+                    require(path.join(__dirname, '../../artifacts/contracts/Evoting.sol/EVoting.json')).abi,
+                    wallet
+                );
+
+                // Call BBvoting function
+                const tx = await contract.BBvoting(
+                    voteData.kv,
+                    voteData.h_v,
+                    voteData.sigma_v_prime.r,
+                    voteData.sigma_v_prime.s,
+                    voteData.sigma_v_prime.v
+                );
+
+                console.log(`  Transaction hash: ${tx.hash}`);
+                console.log(`  Waiting for confirmation...`);
+                
+                const receipt = await tx.wait();
+                console.log(`  ✅ Vote cast successfully!`);
+                console.log(`  Gas used: ${receipt.gasUsed.toString()}`);
+                console.log(`${'='.repeat(70)}\n`);
+                
+                process.exit(0);
+            } catch (error) {
+                console.error('\n❌ Error casting vote on-chain:', error.message);
+                console.log('\nVote was generated and saved, but on-chain transaction failed.');
+                console.log(`File: ${filePath}`);
+                process.exit(1);
+            }
         })
         .catch((error) => {
             console.error('\nFatal error:', error.message);

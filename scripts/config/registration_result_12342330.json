@@ -3,9 +3,9 @@
   "sid": "12342330",
   "electionId": "election_001",
   "registrationIndex": "0",
-  "newPublicKey": "0x8847c88aea864e0617065252eb08ae0720db7a57cae3b8ac06c3f101c33a6b770ca0b4000fdd2605bad6616f712428f6db038cf09f8b33e41670a32336ac14e4",
-  "transactionHash": "0x9746f25d0602c76b3991f87ebe11afc27164634edd9a25f14bac02531537c4ab",
-  "blockNumber": 6037,
-  "gasUsed": "3331730",
-  "timestamp": "2026-01-13T14:53:35.369Z"
+  "newPublicKey": "0xdd199e67bc5c97515f5d8cf00b0ef1f033e373432c74aff5c586574de9835ae6a935ec4b50115079721b496d09ef4557f6f551a78a745a29681d2283fb4d851d",
+  "transactionHash": "0x559cd06cfec96a6609be70bf789701d823e6ab96de07df5f8d1f5ef247267df3",
+  "blockNumber": 7077,
+  "gasUsed": "3261821",
+  "timestamp": "2026-01-13T19:13:36.060Z"
 }

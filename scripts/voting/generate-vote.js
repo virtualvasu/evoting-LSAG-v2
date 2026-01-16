@@ -145,7 +145,7 @@ if (require.main === module) {
                 const deployment = JSON.parse(fs.readFileSync(deploymentPath, 'utf8'));
                 
                 // Connect to contract
-                const provider = new ethers.JsonRpcProvider('http://10.10.0.60:8550');
+                const provider = new ethers.JsonRpcProvider('http://localhost:8545');
                 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
                 const contract = new ethers.Contract(
                     deployment.contractAddress,

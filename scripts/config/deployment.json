@@ -5,7 +5,7 @@
   "chainId": "31337",
   "note": "EVoting with Simple LSAG implementation - forward-chaining verification",
   "secp256k1Address": "0x73511669fd4dE447feD18BB79bAFeAC93aB7F31f",
-  "secp256k1DeployedAt": "2026-01-16T06:36:37.470Z",
+  "secp256k1DeployedAt": "2026-01-17T03:56:47.461Z",
   "evotingAddress": "0xB581C9264f59BF0289fA76D61B2D0746dCE3C30D",
-  "evotingDeployedAt": "2026-01-16T06:36:58.508Z"
+  "evotingDeployedAt": "2026-01-17T03:56:50.681Z"
 }

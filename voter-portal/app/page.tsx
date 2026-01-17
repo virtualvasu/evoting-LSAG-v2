@@ -56,33 +56,59 @@ export default function Home() {
                 </div>
               </Link>
 
-              <div className="p-6 bg-gray-200 rounded-lg shadow-lg opacity-60 cursor-not-allowed">
-                <div className="text-gray-600">
+              {/* Generate LSAG Signature */}
+              <Link 
+                href="/generate-lsag"
+                className="block p-6 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+              >
+                <div className="text-white">
                   <div className="flex items-center mb-3">
                     <svg className="w-8 h-8 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
-                    <h3 className="text-xl font-bold">Function 3</h3>
+                    <h3 className="text-xl font-bold">Generate LSAG Signature</h3>
                   </div>
-                  <p className="text-gray-500">
-                    Coming soon...
+                  <p className="text-purple-100">
+                    Create anonymous voting signature
                   </p>
                 </div>
-              </div>
+              </Link>
 
-              <div className="p-6 bg-gray-200 rounded-lg shadow-lg opacity-60 cursor-not-allowed">
-                <div className="text-gray-600">
+              {/* Submit LSAG Registration */}
+              <Link 
+                href="/submit-lsag"
+                className="block p-6 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+              >
+                <div className="text-white">
                   <div className="flex items-center mb-3">
                     <svg className="w-8 h-8 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                     </svg>
-                    <h3 className="text-xl font-bold">Function 4</h3>
+                    <h3 className="text-xl font-bold">Submit LSAG Registration</h3>
                   </div>
-                  <p className="text-gray-500">
-                    Coming soon...
+                  <p className="text-orange-100">
+                    Complete registration with BB.verify
                   </p>
                 </div>
-              </div>
+              </Link>
+
+              {/* Cast Vote */}
+              <Link 
+                href="/vote"
+                className="block p-6 bg-gradient-to-br from-red-500 to-red-600 rounded-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+              >
+                <div className="text-white">
+                  <div className="flex items-center mb-3">
+                    <svg className="w-8 h-8 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h3 className="text-xl font-bold">Cast Vote</h3>
+                  </div>
+                  <p className="text-red-100">
+                    Generate and submit your encrypted vote
+                  </p>
+                </div>
+              </Link>
             </div>
           </div>
 

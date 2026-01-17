@@ -113,6 +113,97 @@ export class BlockchainService {
   }
 
   /**
+   * Get registered public keys (not hashes)
+   */
+  async getRegisteredPublicKeys(): Promise<string[]> {
+    if (!this.contract) {
+      throw new Error('Contract not initialized');
+    }
+    const pubKeys = await this.contract.getRegisteredPublicKeys();
+    // Convert bytes[] to string[]
+    return pubKeys.map((pk: string) => pk);
+  }
+
+  /**
+   * Get registration table size
+   */
+  async getRegistrationTableSize(): Promise<bigint> {
+    if (!this.contract) {
+      throw new Error('Contract not initialized');
+    }
+    return await this.contract.getRegistrationTableSize();
+  }
+
+  /**
+   * Submit LSAG signature for BB.verify registration
+   */
+  async submitLSAGRegistration(
+    electionId: string,
+    lsagSignature: {
+      keyImageX: string;
+      keyImageY: string;
+      c: string;
+      s: string[];
+    },
+    newPublicKey: string
+  ): Promise<{
+    kv: string;
+    transactionHash: string;
+    blockNumber: number;
+    gasUsed: string;
+  }> {
+    if (!this.contract || !this.signer) {
+      throw new Error('Wallet not connected');
+    }
+
+    // Convert election ID to hash if it's a string
+    const electionIdHash = electionId.startsWith('0x') 
+      ? electionId 
+      : ethers.keccak256(ethers.toUtf8Bytes(electionId));
+
+    // Call BBverify function
+    const tx = await this.contract.BBverify(electionIdHash, lsagSignature, newPublicKey, {
+      gasLimit: 30000000 // Max gas limit for private chain
+    });
+
+    // Wait for confirmation
+    const receipt = await tx.wait();
+
+    if (!receipt) {
+      throw new Error('Transaction failed');
+    }
+
+    // Parse events to get kv
+    let kv: string | null = null;
+    for (const log of receipt.logs) {
+      try {
+        const parsedLog = this.contract.interface.parseLog({
+          topics: [...log.topics],
+          data: log.data
+        });
+        if (parsedLog && parsedLog.name === 'RegistrationSuccess') {
+          kv = parsedLog.args.kv.toString();
+        }
+      } catch (e) {
+        // Skip logs we can't parse
+      }
+    }
+
+    if (kv === null) {
+      // Try to get registration table size
+      const tableSize = await this.getRegistrationTableSize();
+      kv = (tableSize - BigInt(1)).toString();
+    }
+
+    return {
+      kv: kv!,
+      transactionHash: receipt.hash,
+      blockNumber: receipt.blockNumber,
+      gasUsed: receipt.gasUsed.toString()
+    };
+  }
+
+  /**
    * Store voter's public key certificate on blockchain
    */
   async storePub(certificate: Certificate): Promise<UpdateRingResult> {
@@ -156,7 +247,7 @@ export class BlockchainService {
       success: true,
       voterName: certificate.voterName,
       sid: certificate.sid,
-      ringPosition: (newRingSize - 1n).toString(),
+      ringPosition: (newRingSize - BigInt(1)).toString(),
       ringSize: newRingSize.toString(),
       voterRing: voterRing,
       transactionHash: receipt.hash

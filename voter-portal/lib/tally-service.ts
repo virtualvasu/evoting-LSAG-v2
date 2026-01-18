@@ -1,0 +1,330 @@
+import { ethers } from 'ethers';
+
+export interface VoteReveal {
+  kv: number;
+  candidateChoice: string;
+  r: string;
+}
+
+export interface TallyResult {
+  success: boolean;
+  transactionHash?: string;
+  gasUsed?: string;
+  results?: ElectionResults;
+  error?: string;
+}
+
+export interface ElectionResults {
+  A: string;
+  B: string;
+  C: string;
+  D: string;
+  E: string;
+  total: string;
+}
+
+export interface VoteVerification {
+  valid: boolean;
+  storedHash: string;
+  calculatedHash: string;
+  message?: string;
+}
+
+// List of valid candidates
+export const CANDIDATES = ['A', 'B', 'C', 'D', 'E'] as const;
+export type Candidate = typeof CANDIDATES[number];
+
+/**
+ * Tally Service for E-Voting System
+ * Handles vote tallying and result retrieval
+ */
+export class TallyService {
+  private provider: ethers.BrowserProvider | null = null;
+  private contract: ethers.Contract | null = null;
+  private signer: ethers.Signer | null = null;
+  private contractABI: any[] = [];
+
+  constructor(
+    private contractAddress: string,
+    private rpcUrl: string = 'http://localhost:8545'
+  ) {
+    if (!contractAddress || contractAddress === 'undefined' || contractAddress === 'null') {
+      throw new Error('Invalid contract address provided');
+    }
+  }
+
+  /**
+   * Load contract ABI from API
+   */
+  async loadABI(): Promise<void> {
+    const response = await fetch('/api/contract');
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to load contract config');
+    }
+    const data = await response.json();
+    
+    if (!data.abi || data.abi.length === 0) {
+      throw new Error('ABI not found in contract configuration');
+    }
+    
+    this.contractABI = data.abi;
+  }
+
+  /**
+   * Connect to wallet
+   */
+  async connectWallet(): Promise<string> {
+    if (typeof window === 'undefined' || !window.ethereum) {
+      throw new Error('Please install MetaMask or another Web3 wallet');
+    }
+
+    if (this.contractABI.length === 0) {
+      await this.loadABI();
+    }
+
+    this.provider = new ethers.BrowserProvider(window.ethereum);
+    await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+    this.signer = await this.provider.getSigner();
+    const address = await this.signer.getAddress();
+
+    const network = await this.provider.getNetwork();
+    console.log('Connected to network:', network.chainId.toString());
+
+    if (!this.contractAddress || this.contractAddress === 'undefined' || this.contractAddress === 'null') {
+      throw new Error('Contract address is not set. Please ensure contract-config.json is properly configured.');
+    }
+
+    const code = await this.provider.getCode(this.contractAddress);
+    if (code === '0x') {
+      throw new Error(
+        `No contract found at ${this.contractAddress}. ` +
+        `Please check contract deployment.`
+      );
+    }
+
+    this.contract = new ethers.Contract(
+      this.contractAddress,
+      this.contractABI,
+      this.signer
+    );
+
+    return address;
+  }
+
+  /**
+   * Verify vote integrity locally before tallying
+   * Checks if keccak256(c || r) matches stored h_v
+   */
+  async verifyVoteIntegrity(
+    kv: number,
+    candidateChoice: Candidate,
+    r: string
+  ): Promise<VoteVerification> {
+    if (!this.contract) {
+      throw new Error('Contract not initialized. Please connect wallet first.');
+    }
+
+    try {
+      // Get stored vote hash
+      const storedHash = await this.contract.getVoteHash(kv);
+      
+      if (storedHash === ethers.ZeroHash) {
+        return {
+          valid: false,
+          storedHash: storedHash,
+          calculatedHash: '',
+          message: 'No vote found for this registration index',
+        };
+      }
+
+      // Calculate hash locally: keccak256(c || r)
+      const candidateByte = ethers.toBeHex(candidateChoice.charCodeAt(0), 1);
+      const rBytes = ethers.getBytes(r);
+      const messageToHash = ethers.concat([candidateByte, rBytes]);
+      const calculatedHash = ethers.keccak256(messageToHash);
+
+      const valid = storedHash === calculatedHash;
+
+      return {
+        valid,
+        storedHash,
+        calculatedHash,
+        message: valid
+          ? 'Vote integrity verified successfully'
+          : 'Hash mismatch! Vote may have been cast with different parameters',
+      };
+    } catch (error: any) {
+      throw new Error(`Failed to verify vote: ${error.message}`);
+    }
+  }
+
+  /**
+   * Tally a vote by revealing (c, r)
+   * Calls BB.tally(k, c, r) on blockchain
+   * 
+   * Steps per protocol:
+   * 1. Verify k < |T|
+   * 2. Verify T[k][2] != 0 (vote exists)
+   * 3. Verify keccak256(c || r) == T[k][2]
+   * 4. R[c]++
+   */
+  async tallyVote(voteReveal: VoteReveal): Promise<TallyResult> {
+    try {
+      if (!this.contract) {
+        throw new Error('Contract not initialized. Please connect wallet first.');
+      }
+
+      const { kv, candidateChoice, r } = voteReveal;
+
+      // Validate inputs
+      if (!candidateChoice || !CANDIDATES.includes(candidateChoice as Candidate)) {
+        throw new Error(
+          `Invalid candidate choice. Valid candidates: ${CANDIDATES.join(', ')}`
+        );
+      }
+
+      if (!r || !r.startsWith('0x')) {
+        throw new Error('Invalid random number format. Must be hex string starting with 0x');
+      }
+
+      console.log('Tallying vote...');
+      console.log('Registration index:', kv);
+      console.log('Candidate:', candidateChoice);
+      console.log('Random:', r.substring(0, 20) + '...');
+
+      // Verify locally first
+      const verification = await this.verifyVoteIntegrity(
+        kv,
+        candidateChoice as Candidate,
+        r
+      );
+
+      console.log('Local verification:', verification.message);
+      console.log('Stored hash:', verification.storedHash);
+      console.log('Calculated hash:', verification.calculatedHash);
+
+      if (!verification.valid) {
+        throw new Error(verification.message || 'Vote verification failed');
+      }
+
+      // Convert candidate to bytes1
+      const candidateByte = ethers.toBeHex(candidateChoice.charCodeAt(0), 1);
+      const rBytes = ethers.getBytes(r);
+
+      // Call BBtally function
+      console.log('Submitting tally transaction...');
+      const tx = await this.contract.BBtally(kv, candidateByte, rBytes);
+
+      console.log('Transaction sent:', tx.hash);
+      console.log('Waiting for confirmation...');
+
+      const receipt = await tx.wait();
+
+      console.log('Vote tallied successfully!');
+      console.log('Gas used:', receipt.gasUsed.toString());
+
+      // Get updated results
+      const results = await this.getResults();
+
+      return {
+        success: true,
+        transactionHash: receipt.hash,
+        gasUsed: receipt.gasUsed.toString(),
+        results,
+      };
+    } catch (error: any) {
+      console.error('Error tallying vote:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to tally vote',
+      };
+    }
+  }
+
+  /**
+   * Get current election results
+   */
+  async getResults(): Promise<ElectionResults> {
+    if (!this.contract) {
+      throw new Error('Contract not initialized');
+    }
+
+    try {
+      const allResults = await this.contract.getAllResults();
+      
+      let total = BigInt(0);
+      const results: ElectionResults = {
+        A: allResults[0].toString(),
+        B: allResults[1].toString(),
+        C: allResults[2].toString(),
+        D: allResults[3].toString(),
+        E: allResults[4].toString(),
+        total: '0',
+      };
+
+      // Calculate total
+      for (let i = 0; i < 5; i++) {
+        total += allResults[i];
+      }
+      results.total = total.toString();
+
+      return results;
+    } catch (error: any) {
+      console.error('Error fetching results:', error);
+      throw new Error(`Failed to get results: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get vote count for a specific candidate
+   */
+  async getVoteCount(candidate: Candidate): Promise<string> {
+    if (!this.contract) {
+      throw new Error('Contract not initialized');
+    }
+
+    try {
+      const candidateByte = ethers.toBeHex(candidate.charCodeAt(0), 1);
+      const count = await this.contract.getVoteCount(candidateByte);
+      return count.toString();
+    } catch (error: any) {
+      console.error('Error fetching vote count:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if voter has voted
+   */
+  async hasVoted(kv: number): Promise<boolean> {
+    if (!this.contract) {
+      throw new Error('Contract not initialized');
+    }
+
+    try {
+      return await this.contract.hasVoted(kv);
+    } catch (error: any) {
+      console.error('Error checking vote status:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get vote hash for a registration index
+   */
+  async getVoteHash(kv: number): Promise<string> {
+    if (!this.contract) {
+      throw new Error('Contract not initialized');
+    }
+
+    try {
+      const hash = await this.contract.getVoteHash(kv);
+      return hash;
+    } catch (error: any) {
+      console.error('Error fetching vote hash:', error);
+      throw error;
+    }
+  }
+}

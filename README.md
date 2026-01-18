@@ -2,7 +2,7 @@
 
 > **Network**: Deployed on private IITBH blockchain (RPC: http://10.10.0.60:8550) — Gas fees are not an issue
 
-**Contract Address**: `0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9`
+**Contract Address**: `0x43ca3D2C94be00692D207C6A1e60D8B325c6f12f`
 
 ---
 

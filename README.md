@@ -2,13 +2,61 @@
 
 > **Network**: Deployed on private IITBH blockchain (RPC: http://10.10.0.60:8550) — Gas fees are not an issue
 
-**Contract Address**: `0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9`
+**Contract Address**: `0xED8CAB8a931A4C0489ad3E3FB5BdEA84f74fD23E`
 
 ---
 
 ## System Overview
 
 ![E-Voting Flow](flowcharts/evoting.png)
+
+---
+
+## Architecture & Components
+
+### Core Design Principle
+This protocol is designed to **eliminate the need for a central server**. The only two components in the system are:
+1. **Voter's Local Machine** - where all vote generation and verification happens
+2. **Blockchain Smart Contract** - immutable record keeping and verification
+
+There is **nothing in between** - no intermediate server or authority storing votes.
+
+### Interaction Modes
+
+#### 🖥️ **Main Branch (CLI Interface)**
+On the main branch, you'll find a **CLI-based interface** that allows users to interact with all election steps:
+- System setup and contract deployment
+- Voter registration with LSAG signatures
+- Vote generation and casting
+- Vote tallying and result verification
+
+Simply follow the election flow steps below to run the election through the command line.
+
+#### 🎨 **Frontend Testing Branch (GUI Interface)**
+For a beautiful graphical user interface, switch to the `frontend-testing` branch:
+```bash
+git checkout frontend-testing
+```
+
+After switching, set up both frontend applications:
+
+**Voter Portal:**
+```bash
+cd voter-portal
+npm install
+npm run dev
+```
+
+**Government Frontend:**
+```bash
+cd government-frontend
+npm install
+npm run dev
+```
+
+This allows you to host local elections and interact with them through an intuitive graphical interface.
+
+> **Note**: Frontend development is still in progress. For the complete and stable experience, use the main branch CLI interface.
 
 ---
 

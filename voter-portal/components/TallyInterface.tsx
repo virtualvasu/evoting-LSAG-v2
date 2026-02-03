@@ -338,29 +338,6 @@ export default function TallyInterface() {
             />
           </div>
 
-          {/* Candidate Choice */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Your Candidate Choice
-            </label>
-            <div className="flex gap-2">
-              {CANDIDATES.map((candidate) => (
-                <button
-                  key={candidate}
-                  onClick={() => setCandidateChoice(candidate)}
-                  className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-colors ${
-                    candidateChoice === candidate
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                  disabled={loading}
-                >
-                  {candidate}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Random Number */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">

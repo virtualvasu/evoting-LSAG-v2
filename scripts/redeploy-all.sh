@@ -9,7 +9,7 @@ cd "$(dirname "$0")/.."
 
 echo ""
 echo "Step 1: Deploying Secp256k1 library..."
-npx hardhat run scripts/deploy-secp256k1.js --network localhost
+npx hardhat run scripts/deploy-secp256k1.js --network iitbh
 
 if [ $? -ne 0 ]; then
     echo "❌ Secp256k1 deployment failed"
@@ -18,7 +18,7 @@ fi
 
 echo ""
 echo "Step 2: Deploying EVoting contract..."
-npx hardhat run scripts/deploy-evoting.js --network localhost
+npx hardhat run scripts/deploy-evoting.js --network iitbh
 
 if [ $? -ne 0 ]; then
     echo "❌ EVoting deployment failed"
@@ -33,8 +33,8 @@ const deployment = JSON.parse(fs.readFileSync('scripts/config/deployment.json', 
 const artifact = JSON.parse(fs.readFileSync('artifacts/contracts/Evoting.sol/EVoting.json', 'utf8'));
 const config = {
   contractAddress: deployment.evotingAddress,
-  rpcUrl: 'http://localhost:8545',
-  network: deployment.network || 'localhost',
+  rpcUrl: 'http://10.10.0.60:8550',
+  network: deployment.network || 'iitbh',
   chainId: deployment.chainId || '31337',
   abi: artifact.abi
 };

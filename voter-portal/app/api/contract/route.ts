@@ -26,7 +26,7 @@ export async function GET() {
     return NextResponse.json({
       address: config.contractAddress,
       contractAddress: config.contractAddress,
-      rpcUrl: config.rpcUrl || 'http://localhost:8545',
+      rpcUrl: config.rpcUrl || 'http://10.10.0.61:8550',
       network: config.network,
       abi: config.abi
     });

@@ -48,7 +48,7 @@ async function runCompleteDemo() {
             console.log(`\n   Registering ${voters[i].name} (${voterId})...`);
 
             // Generate voter keys
-            const voterReg = new VoterRegistration(contractAddress, 'http://localhost:8545');
+            const voterReg = new VoterRegistration(contractAddress, 'http://10.10.0.61:8550');
             const keys = voterReg.generateVoterKeys();
             
             console.log(`   ✓ Generated voter keys`);

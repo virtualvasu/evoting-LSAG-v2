@@ -31,7 +31,7 @@ Edit `voter-portal/contract-config.json`:
 ```json
 {
   "contractAddress": "0xYourContractAddress",
-  "rpcUrl": "http://localhost:8545",
+  "rpcUrl": "http://10.10.0.61:8550",
   "network": "localhost",
   "abi": [
     // Paste the entire ABI array here
@@ -63,7 +63,7 @@ const deployment = JSON.parse(fs.readFileSync('scripts/config/deployment.json', 
 const artifact = JSON.parse(fs.readFileSync('artifacts/contracts/Evoting.sol/EVoting.json', 'utf8'));
 const config = {
   contractAddress: deployment.contractAddress || deployment.evotingAddress,
-  rpcUrl: 'http://localhost:8545',
+  rpcUrl: 'http://10.10.0.61:8550',
   network: deployment.network || 'localhost',
   abi: artifact.abi
 };

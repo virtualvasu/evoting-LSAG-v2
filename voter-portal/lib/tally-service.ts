@@ -46,7 +46,7 @@ export class TallyService {
 
   constructor(
     private contractAddress: string,
-    private rpcUrl: string = 'http://localhost:8545'
+    private rpcUrl: string = 'http://10.10.0.61:8550'
   ) {
     if (!contractAddress || contractAddress === 'undefined' || contractAddress === 'null') {
       throw new Error('Invalid contract address provided');

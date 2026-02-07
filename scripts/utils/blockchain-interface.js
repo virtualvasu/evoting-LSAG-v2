@@ -8,7 +8,7 @@ const path = require('path');
  */
 
 class BlockchainInterface {
-    constructor(contractAddress, providerUrl = 'http://localhost:8545') {
+    constructor(contractAddress, providerUrl = 'http://10.10.0.61:8550') {
         this.contractAddress = contractAddress;
         this.provider = new ethers.JsonRpcProvider(providerUrl);
         this.contract = null;

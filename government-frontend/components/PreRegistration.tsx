@@ -150,7 +150,15 @@ export default function PreRegistration() {
       {response && response.success && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <h3 className="text-lg font-semibold text-green-800 mb-2">✅ Registration Successful!</h3>
-          <p className="text-green-700 mb-4">{response.message}</p>
+          <p className="text-green-700 mb-2">{response.message}</p>
+          
+          {/* Important Notice */}
+          <div className="bg-blue-50 border border-blue-300 rounded-lg p-3 mb-4">
+            <p className="text-sm text-blue-800">
+              <strong>🔒 Security Notice:</strong> Certificate is generated in-memory and is not saved to the project directory. 
+              Only the voter can see and download their certificate for privacy and security.
+            </p>
+          </div>
           
           {response.certificate && (
             <div className="space-y-4">

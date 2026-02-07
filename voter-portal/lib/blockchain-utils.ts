@@ -15,6 +15,8 @@ export interface UpdateRingResult {
   ringPosition: string;
   ringSize: string;
   voterRing: string[];
+  electionId: string;
+  candidates: string[];
   transactionHash: string;
 }
 
@@ -24,7 +26,7 @@ export class BlockchainService {
   private signer: ethers.Signer | null = null;
   private contractABI: any[] = [];
   
-  constructor(private contractAddress: string, private rpcUrl: string = 'http://localhost:8545') {}
+  constructor(private contractAddress: string, private rpcUrl: string = 'http://10.10.0.61:8550') {}
 
   /**
    * Load contract ABI from API
@@ -110,6 +112,30 @@ export class BlockchainService {
     const ring = await this.contract.getVoterRing();
     // Convert bytes32[] to string[]
     return ring.map((hash: string) => hash);
+  }
+
+  /**
+   * Get voter ring with election information
+   */
+  async getVoterRingWithElectionInfo(): Promise<{
+    voterRing: string[];
+    electionId: string;
+    candidates: string[];
+  }> {
+    if (!this.contract) {
+      throw new Error('Contract not initialized');
+    }
+    
+    const [ring, electionId, candidatesBytes] = await this.contract.getVoterRingWithElectionInfo();
+    
+    // Convert candidates from bytes1[] to string[]
+    const candidates = candidatesBytes.map((c: string) => String.fromCharCode(parseInt(c)));
+    
+    return {
+      voterRing: ring.map((hash: string) => hash),
+      electionId: electionId,
+      candidates: candidates
+    };
   }
 
   /**
@@ -239,9 +265,9 @@ export class BlockchainService {
       throw new Error('Transaction failed');
     }
 
-    // Get updated ring
+    // Get updated ring with election info
     const newRingSize = await this.getRingSize();
-    const voterRing = await this.getVoterRing();
+    const ringInfo = await this.getVoterRingWithElectionInfo();
 
     return {
       success: true,
@@ -249,7 +275,9 @@ export class BlockchainService {
       sid: certificate.sid,
       ringPosition: (newRingSize - BigInt(1)).toString(),
       ringSize: newRingSize.toString(),
-      voterRing: voterRing,
+      voterRing: ringInfo.voterRing,
+      electionId: ringInfo.electionId,
+      candidates: ringInfo.candidates,
       transactionHash: receipt.hash
     };
   }

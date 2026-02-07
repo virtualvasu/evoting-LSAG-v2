@@ -47,29 +47,28 @@ export async function POST(request: NextRequest) {
     // Get the project root (parent of government-frontend)
     const projectRoot = path.join(process.cwd(), '..');
     const govConfigPath = path.join(projectRoot, 'scripts/config/government-config.json');
-    const certOutputDir = path.join(projectRoot, 'scripts/pre_registration');
 
     // ============ PRE-REGISTRATION EXECUTION ============
-    // Use service to execute complete pre-registration flow
+    // Use service to execute complete pre-registration flow (in-memory only)
     const result = PreRegistrationService.preRegisterVoter(
       {
         name: name.trim(),
         publicKey,
         studentId: studentId.trim()
       },
-      govConfigPath,
-      certOutputDir
+      govConfigPath
+      // Note: certificateOutputDir removed - no file saving
     );
 
     // ============ RESPONSE ============
     return NextResponse.json(
       {
         success: true,
-        message: `Voter ${result.certificate.voterName} successfully pre-registered. Certificate generated.`,
+        message: `Voter ${result.certificate.voterName} successfully pre-registered. Certificate generated (available for download).`,
         certificate: result.certificate,
         studentId: result.certificate.sid,
-        filePath: result.filePath,
-        signatureLength: result.signature.length
+        signatureLength: result.signature.length,
+        note: "Certificate is generated in-memory and not saved to project directory. Download using the button below."
       },
       { status: 200 }
     );

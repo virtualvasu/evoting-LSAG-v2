@@ -1,11 +1,11 @@
 {
-  "contractAddress": "0xF35CcC5F2Cb4116844A4A293566D5D3691Ea670D",
-  "setupTime": "2026-02-03T19:39:50.975Z",
+  "contractAddress": "0xe5a0ca3FFE17D9D1903FB618dE4E7Adc1d133386",
+  "setupTime": "2026-02-07T22:27:51.584Z",
   "network": "iitbh",
   "chainId": "491002",
   "note": "EVoting with Simple LSAG implementation - forward-chaining verification",
-  "secp256k1Address": "0x0dC62ebf6A511f4bDD88cdb94158110F3844Ffce",
-  "secp256k1DeployedAt": "2026-02-03T19:39:36.270Z",
-  "evotingAddress": "0xF35CcC5F2Cb4116844A4A293566D5D3691Ea670D",
-  "evotingDeployedAt": "2026-02-03T19:39:50.975Z"
+  "secp256k1Address": "0x522aBAd1e3941924A651F42785A8A68c59bB196B",
+  "secp256k1DeployedAt": "2026-02-07T22:27:21.020Z",
+  "evotingAddress": "0xe5a0ca3FFE17D9D1903FB618dE4E7Adc1d133386",
+  "evotingDeployedAt": "2026-02-07T22:27:51.584Z"
 }

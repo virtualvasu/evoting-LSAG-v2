@@ -18,7 +18,7 @@ module.exports = {
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
     iitbh: {
-      url: 'http://10.10.0.60:8550',
+      url: 'http://10.10.0.61:8550',
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
   },

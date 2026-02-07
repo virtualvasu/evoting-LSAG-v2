@@ -11,7 +11,22 @@ export default function GenerateLSAGSignature() {
   const [sid, setSid] = useState('');
   const [electionId, setElectionId] = useState('election_001');
   const [contractAddress, setContractAddress] = useState('');
-  const [rpcUrl, setRpcUrl] = useState('http://localhost:8545');
+  const [rpcUrl, setRpcUrl] = useState('');
+
+  // Load RPC URL from config on mount
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const response = await fetch('/contract-config.json');
+        const config = await response.json();
+        setRpcUrl(config.rpcUrl);
+      } catch (error) {
+        console.error('Failed to load config:', error);
+        setRpcUrl('http://10.10.0.61:8550'); // fallback
+      }
+    };
+    loadConfig();
+  }, []);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoadingConfig, setIsLoadingConfig] = useState(true);
   const [result, setResult] = useState<LSAGSignatureResult | null>(null);
@@ -31,7 +46,7 @@ export default function GenerateLSAGSignature() {
       }
       const config = await response.json();
       setContractAddress(config.contractAddress);
-      setRpcUrl(config.rpcUrl || 'http://localhost:8545');
+      setRpcUrl(config.rpcUrl || 'http://10.10.0.61:8550');
     } catch (err) {
       setError('Failed to load contract config: ' + (err as Error).message);
     } finally {

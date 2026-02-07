@@ -7,7 +7,7 @@ export default function UpdateVoterRing() {
   const [certificateInput, setCertificateInput] = useState('');
   const [certificate, setCertificate] = useState<Certificate | null>(null);
   const [contractAddress, setContractAddress] = useState('');
-  const [rpcUrl, setRpcUrl] = useState('http://localhost:8545');
+  const [rpcUrl, setRpcUrl] = useState('');
   const [walletAddress, setWalletAddress] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoadingConfig, setIsLoadingConfig] = useState(true);
@@ -23,13 +23,13 @@ export default function UpdateVoterRing() {
   const loadDeploymentConfig = async () => {
     setIsLoadingConfig(true);
     try {
-      const response = await fetch('/api/contract');
+      const response = await fetch('/contract-config.json');
       if (!response.ok) {
         throw new Error('Failed to load contract config');
       }
       const config = await response.json();
       setContractAddress(config.contractAddress);
-      setRpcUrl(config.rpcUrl || 'http://localhost:8545');
+      setRpcUrl(config.rpcUrl || 'http://10.10.0.61:8550');
     } catch (err) {
       setError('Failed to load contract config: ' + (err as Error).message);
     } finally {
@@ -306,7 +306,7 @@ export default function UpdateVoterRing() {
                 </div>
                 <div className="ml-3">
                   <p className="text-sm text-yellow-700">
-                    <strong>Important:</strong> Make sure MetaMask is connected to the same network as your contract (usually Localhost 8545 for local development).
+                    <strong>Important:</strong> Make sure MetaMask is connected to the same network as your contract (IITBH Private Network - Chain ID: 491002).
                   </p>
                 </div>
               </div>
@@ -382,6 +382,35 @@ export default function UpdateVoterRing() {
               </div>
             </div>
 
+            {/* Election Information */}
+            {result.electionId && result.candidates && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                <h3 className="font-semibold text-blue-900">Election Information</h3>
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <span className="font-medium text-blue-800">Election ID:</span>
+                    <p className="text-blue-900 font-mono">{result.electionId}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-blue-800">Candidates:</span>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {result.candidates.map((candidate, index) => (
+                        <span
+                          key={index}
+                          className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium"
+                        >
+                          {candidate}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-xs text-blue-700 bg-blue-100 p-2 rounded">
+                  💡 You can now vote in this election using these candidate options.
+                </div>
+              </div>
+            )}
+
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
               <h3 className="font-semibold text-gray-800 mb-3">Updated Voter Ring ({result.voterRing.length} voters)</h3>
               <div className="max-h-64 overflow-y-auto space-y-2">
@@ -449,7 +478,7 @@ export default function UpdateVoterRing() {
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
           <h3 className="text-sm font-semibold text-yellow-900 mb-2">⚠️ Common Issues</h3>
           <ul className="text-sm text-yellow-800 space-y-1 list-disc list-inside">
-            <li><strong>Network mismatch:</strong> Make sure MetaMask is connected to Localhost 8545 (chainId: 31337)</li>
+            <li><strong>Network mismatch:</strong> Make sure MetaMask is connected to IITBH Private Network (chainId: 491002)</li>
             <li><strong>Contract not found:</strong> Verify the contract address in contract-config.json</li>
             <li><strong>Wrong RPC:</strong> Check browser console for network errors</li>
           </ul>

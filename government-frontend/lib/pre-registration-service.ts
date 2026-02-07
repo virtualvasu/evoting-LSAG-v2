@@ -166,9 +166,33 @@ export class PreRegistrationService {
   }
 
   /**
-   * Save certificate to file
+   * Complete pre-registration flow (in-memory only - no file saving)
+   * Returns the certificate data for display/download
    */
-  static saveCertificate(
+  static preRegisterVoter(
+    voterDetails: VoterDetails,
+    governmentConfigPath: string,
+    certificateOutputDir?: string  // Made optional since we don't save files
+  ): { certificate: Certificate; signature: string } {
+    try {
+      // Load government config
+      const govConfig = this.loadGovernmentConfig(governmentConfigPath);
+
+      // Generate signed certificate
+      const { certificate, signature } = this.generateCertificate(voterDetails, govConfig);
+
+      // Return certificate data (no file saving)
+      return { certificate, signature };
+    } catch (error) {
+      throw new Error(`Pre-registration failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Save certificate to file (optional utility function)
+   * Only called if user explicitly wants to save to project directory
+   */
+  static saveCertificateToFile(
     certificate: Certificate,
     outputDir: string
   ): string {
@@ -184,30 +208,5 @@ export class PreRegistrationService {
     fs.writeFileSync(filePath, JSON.stringify(certificate, null, 2));
 
     return filePath;
-  }
-
-  /**
-   * Complete pre-registration flow
-   * Returns the certificate and file path
-   */
-  static preRegisterVoter(
-    voterDetails: VoterDetails,
-    governmentConfigPath: string,
-    certificateOutputDir: string
-  ): { certificate: Certificate; filePath: string; signature: string } {
-    try {
-      // Load government config
-      const govConfig = this.loadGovernmentConfig(governmentConfigPath);
-
-      // Generate signed certificate
-      const { certificate, signature } = this.generateCertificate(voterDetails, govConfig);
-
-      // Save to file
-      const filePath = this.saveCertificate(certificate, certificateOutputDir);
-
-      return { certificate, filePath, signature };
-    } catch (error) {
-      throw new Error(`Pre-registration failed: ${error instanceof Error ? error.message : String(error)}`);
-    }
   }
 }

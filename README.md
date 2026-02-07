@@ -1,6 +1,6 @@
 # LSAG-Based E-Voting System
 
-> **Network**: Deployed on private IITBH blockchain (RPC: http://10.10.0.60:8550) — Gas fees are not an issue
+> **Network**: Deployed on private IITBH blockchain (RPC: http://10.10.0.61:8550) — Gas fees are not an issue
 
 **Contract Address**: `0xED8CAB8a931A4C0489ad3E3FB5BdEA84f74fD23E`
 

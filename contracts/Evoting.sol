@@ -61,6 +61,10 @@ contract EVoting {
     // Results R[c]: maps candidate to vote count
     mapping(bytes1 => uint256) public results;
 
+    // Election configuration
+    string public electionId;
+    bytes1[] public candidates;
+
     // Events
     event PublicKeyStored(bytes signature, bytes publicKey);
     event RegistrationSuccess(uint256 indexed kv, bytes publicKey);
@@ -72,6 +76,14 @@ contract EVoting {
     constructor(address _secp256k1) {
         require(_secp256k1 != address(0), "Invalid Secp256k1 address");
         secp256k1 = ISecp256k1(_secp256k1);
+        
+        // Initialize election configuration
+        electionId = "election_001";
+        candidates.push(0x41); // 'A'
+        candidates.push(0x42); // 'B'
+        candidates.push(0x43); // 'C'
+        candidates.push(0x44); // 'D'
+        candidates.push(0x45); // 'E'
     }
 
     // -------- REGISTRATION PHASE -------- //
@@ -142,6 +154,24 @@ contract EVoting {
         return false;
     }
 
+    /**
+     * @dev Get voter ring with election information
+     * @return _ring Array of public key hashes
+     * @return _electionId Current election identifier
+     * @return _candidates Array of candidate choices
+     */
+    function getVoterRingWithElectionInfo() 
+        public 
+        view 
+        returns (
+            bytes32[] memory _ring,
+            string memory _electionId,
+            bytes1[] memory _candidates
+        ) 
+    {
+        return (voterRing, electionId, candidates);
+    }
+
     function createCertificate(
         bytes memory sigma_tilde_v,
         bytes memory P_ugov,
@@ -203,14 +233,14 @@ contract EVoting {
 
     /**
      * @dev LSAG.ver - Verify LSAG signature (SIMPLE VERSION)
-     * @param electionId Election identifier
+     * @param electionIdHash Election identifier hash
      * @param lsagSig LSAG signature containing key image, c (c[0]), and s array
      * @return bool True if signature is valid, false otherwise
      * 
      * Simple forward-chaining: c[0] -> c[1] -> c[2] -> ... -> c[0]
      */
     function LSAGver(
-        uint256 electionId,
+        uint256 electionIdHash,
         LSAGSignature memory lsagSig
     ) public view returns (bool) {
         uint256 ringSize = voterRing.length;
@@ -248,7 +278,7 @@ contract EVoting {
             (Rix, Riy) = _computeR(lsagSig.s[i], Pix, Piy, currentChallenge, lsagSig.keyImageX, lsagSig.keyImageY);
             
             // Compute next challenge: c[i+1] = H(electionId, L[i], R[i])
-            currentChallenge = uint256(keccak256(abi.encodePacked(electionId, Lix, Liy, Rix, Riy)));
+            currentChallenge = uint256(keccak256(abi.encodePacked(electionIdHash, Lix, Liy, Rix, Riy)));
         }
         
         // After full loop, should arrive back at c[0]
@@ -320,18 +350,18 @@ contract EVoting {
     /**
      * @dev BB.verify - Verify and register voter with LSAG signature
      * Implements the BB.verify(σ, Pu') function from the paper
-     * @param electionId Election identifier (L)
+     * @param electionIdHash Election identifier hash (L)
      * @param lsagSig LSAG signature (σv)
      * @param voterPubKey Voter's public key (Pu')
      * @return kv Registration index or revert on failure
      */
     function BBverify(
-        uint256 electionId,
+        uint256 electionIdHash,
         LSAGSignature memory lsagSig,
         bytes memory voterPubKey
     ) public returns (uint256 kv) {
         // Step 1: LSAG.ver(L, Pu, σv) = 1
-        require(LSAGver(electionId, lsagSig), "LSAG verification failed");
+        require(LSAGver(electionIdHash, lsagSig), "LSAG verification failed");
         
         // Step 2: Check for linkability with existing registrations
         // if ∃ j ∈ {0,1,··· ,|T|−1}, LSAG.linkVer(Pu, L, L, σv, T[j][0]) = 1

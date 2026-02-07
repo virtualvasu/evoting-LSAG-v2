@@ -81,18 +81,22 @@ async function updateVoterRing(certPath) {
         console.log(`  ✅ Transaction confirmed!`);
         console.log(`  Gas used: ${receipt.gasUsed.toString()}`);
 
-        // Get updated ring
+        // Get updated ring with election information
         const newRingSize = await contract.getRingSize();
         console.log(`\n📊 Updated ring size: ${newRingSize.toString()}`);
 
-        // Get the complete voter ring
-        const voterRing = await contract.getVoterRing();
+        // Get the complete voter ring with election info
+        const [voterRing, electionId, candidates] = await contract.getVoterRingWithElectionInfo();
         
         console.log(`\n🔐 Updated Voter Ring:`);
         console.log('='.repeat(70));
         voterRing.forEach((pubKeyHash, index) => {
             console.log(`  [${index}] ${pubKeyHash}`);
         });
+
+        console.log(`\n📊 Election Information:`);
+        console.log(`  Election ID: ${electionId}`);
+        console.log(`  Candidates: ${candidates.map(c => String.fromCharCode(c)).join(', ')}`);
 
         console.log('\n' + '='.repeat(70));
         console.log(`✅ Voter added to ring successfully!`);
@@ -111,6 +115,8 @@ async function updateVoterRing(certPath) {
             voterKeys.voterRing = voterRing;
             voterKeys.ringPosition = (newRingSize - 1n).toString();
             voterKeys.ringSize = newRingSize.toString();
+            voterKeys.electionId = electionId;
+            voterKeys.candidates = candidates.map(c => String.fromCharCode(c));
             voterKeys.updatedAt = new Date().toISOString();
             fs.writeFileSync(voterKeysPath, JSON.stringify(voterKeys, null, 2));
             console.log(`\n💾 Voter ring saved to: ${voterKeysPath}`);
@@ -127,6 +133,8 @@ async function updateVoterRing(certPath) {
             ringPosition: (newRingSize - 1n).toString(),
             ringSize: newRingSize.toString(),
             voterRing: voterRing,
+            electionId: electionId,
+            candidates: candidates.map(c => String.fromCharCode(c)),
             transactionHash: tx.hash
         };
 

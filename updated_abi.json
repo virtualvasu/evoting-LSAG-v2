@@ -1,0 +1,976 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_secp256k1",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "inputs": [],
+    "name": "ECDSAInvalidSignature",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "length",
+        "type": "uint256"
+      }
+    ],
+    "name": "ECDSAInvalidSignatureLength",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "s",
+        "type": "bytes32"
+      }
+    ],
+    "name": "ECDSAInvalidSignatureS",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnableInvalidOwner",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "OwnableUnauthorizedAccount",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "string",
+        "name": "electionId",
+        "type": "string"
+      }
+    ],
+    "name": "ElectionEnded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "string",
+        "name": "electionId",
+        "type": "string"
+      }
+    ],
+    "name": "ElectionReset",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "string",
+        "name": "electionId",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes1[]",
+        "name": "candidates",
+        "type": "bytes1[]"
+      }
+    ],
+    "name": "ElectionStarted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previousOwner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnershipTransferred",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "bytes",
+        "name": "signature",
+        "type": "bytes"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes",
+        "name": "publicKey",
+        "type": "bytes"
+      }
+    ],
+    "name": "PublicKeyStored",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "string",
+        "name": "electionId",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "reason",
+        "type": "string"
+      }
+    ],
+    "name": "RegistrationFailed",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "string",
+        "name": "electionId",
+        "type": "string"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "kv",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes",
+        "name": "publicKey",
+        "type": "bytes"
+      }
+    ],
+    "name": "RegistrationSuccess",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "string",
+        "name": "electionId",
+        "type": "string"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "kv",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "voteHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "VoteCasted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "string",
+        "name": "electionId",
+        "type": "string"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "kv",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "bytes1",
+        "name": "candidate",
+        "type": "bytes1"
+      }
+    ],
+    "name": "VoteTallied",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "k",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes1",
+        "name": "c",
+        "type": "bytes1"
+      },
+      {
+        "internalType": "bytes",
+        "name": "r",
+        "type": "bytes"
+      }
+    ],
+    "name": "BBtally",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "electionIdHash",
+        "type": "uint256"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "keyImageX",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "keyImageY",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "c",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "s",
+            "type": "uint256[]"
+          }
+        ],
+        "internalType": "struct EVoting.LSAGSignature",
+        "name": "lsagSig",
+        "type": "tuple"
+      },
+      {
+        "internalType": "bytes",
+        "name": "voterPubKey",
+        "type": "bytes"
+      }
+    ],
+    "name": "BBverify",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "kv",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "k",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "h",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "r",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "s",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "uint8",
+        "name": "v",
+        "type": "uint8"
+      }
+    ],
+    "name": "BBvoting",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "keyImageX",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "keyImageY",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "c",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "s",
+            "type": "uint256[]"
+          }
+        ],
+        "internalType": "struct EVoting.LSAGSignature",
+        "name": "sig1",
+        "type": "tuple"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "keyImageX",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "keyImageY",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "c",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "s",
+            "type": "uint256[]"
+          }
+        ],
+        "internalType": "struct EVoting.LSAGSignature",
+        "name": "sig2",
+        "type": "tuple"
+      }
+    ],
+    "name": "LSAGlinkVer",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "pure",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "electionIdHash",
+        "type": "uint256"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "keyImageX",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "keyImageY",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "c",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "s",
+            "type": "uint256[]"
+          }
+        ],
+        "internalType": "struct EVoting.LSAGSignature",
+        "name": "lsagSig",
+        "type": "tuple"
+      }
+    ],
+    "name": "LSAGver",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes",
+        "name": "sigma_tilde_v",
+        "type": "bytes"
+      },
+      {
+        "internalType": "bytes",
+        "name": "P_ugov",
+        "type": "bytes"
+      },
+      {
+        "internalType": "bytes",
+        "name": "P_uv",
+        "type": "bytes"
+      },
+      {
+        "internalType": "string",
+        "name": "voterName",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "sid",
+        "type": "string"
+      }
+    ],
+    "name": "createCertificate",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "bytes",
+            "name": "sigma_tilde_v",
+            "type": "bytes"
+          },
+          {
+            "internalType": "bytes",
+            "name": "P_ugov",
+            "type": "bytes"
+          },
+          {
+            "internalType": "bytes",
+            "name": "P_uv",
+            "type": "bytes"
+          },
+          {
+            "internalType": "string",
+            "name": "voterName",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "sid",
+            "type": "string"
+          }
+        ],
+        "internalType": "struct EVoting.Certificate",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "pure",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "currentElection",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "electionId",
+        "type": "string"
+      },
+      {
+        "internalType": "bool",
+        "name": "isActive",
+        "type": "bool"
+      },
+      {
+        "internalType": "bool",
+        "name": "isCompleted",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "endElection",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getAllResults",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "",
+        "type": "uint256[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getElectionStatus",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "_electionId",
+        "type": "string"
+      },
+      {
+        "internalType": "bool",
+        "name": "_isActive",
+        "type": "bool"
+      },
+      {
+        "internalType": "bool",
+        "name": "_isCompleted",
+        "type": "bool"
+      },
+      {
+        "internalType": "bytes1[]",
+        "name": "_candidates",
+        "type": "bytes1[]"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_registeredVoters",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getRegisteredPublicKeys",
+    "outputs": [
+      {
+        "internalType": "bytes[]",
+        "name": "",
+        "type": "bytes[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "index",
+        "type": "uint256"
+      }
+    ],
+    "name": "getRegistrationEntry",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "keyImageX",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "keyImageY",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "c",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "s",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "bytes",
+        "name": "publicKey",
+        "type": "bytes"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "voteHash",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getRegistrationTableSize",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getRingSize",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes1",
+        "name": "c",
+        "type": "bytes1"
+      }
+    ],
+    "name": "getVoteCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "k",
+        "type": "uint256"
+      }
+    ],
+    "name": "getVoteHash",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getVoterRing",
+    "outputs": [
+      {
+        "internalType": "bytes32[]",
+        "name": "",
+        "type": "bytes32[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getVoterRingWithElectionInfo",
+    "outputs": [
+      {
+        "internalType": "bytes32[]",
+        "name": "_ring",
+        "type": "bytes32[]"
+      },
+      {
+        "internalType": "string",
+        "name": "_electionId",
+        "type": "string"
+      },
+      {
+        "internalType": "bytes1[]",
+        "name": "_candidates",
+        "type": "bytes1[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "k",
+        "type": "uint256"
+      }
+    ],
+    "name": "hasVoted",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "name": "hashToPublicKey",
+    "outputs": [
+      {
+        "internalType": "bytes",
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes",
+        "name": "publicKey",
+        "type": "bytes"
+      }
+    ],
+    "name": "isPublicKeyInRing",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "owner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes",
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "name": "publicKeys",
+    "outputs": [
+      {
+        "internalType": "bytes",
+        "name": "publicKey",
+        "type": "bytes"
+      },
+      {
+        "internalType": "bool",
+        "name": "exists",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "renounceOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "resetElectionData",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "secp256k1",
+    "outputs": [
+      {
+        "internalType": "contract ISecp256k1",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "_electionId",
+        "type": "string"
+      },
+      {
+        "internalType": "bytes1[]",
+        "name": "_candidates",
+        "type": "bytes1[]"
+      }
+    ],
+    "name": "startElection",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "bytes",
+            "name": "sigma_tilde_v",
+            "type": "bytes"
+          },
+          {
+            "internalType": "bytes",
+            "name": "P_ugov",
+            "type": "bytes"
+          },
+          {
+            "internalType": "bytes",
+            "name": "P_uv",
+            "type": "bytes"
+          },
+          {
+            "internalType": "string",
+            "name": "voterName",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "sid",
+            "type": "string"
+          }
+        ],
+        "internalType": "struct EVoting.Certificate",
+        "name": "cert_u",
+        "type": "tuple"
+      }
+    ],
+    "name": "storePub",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "transferOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "voterRing",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]

@@ -216,7 +216,7 @@ export default function SubmitLSAGRegistration() {
             <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-semibold text-gray-800">Blockchain Configuration</h3>
-                <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">Auto-loaded</span>
+                <span className="text-xs bg-blue-600 text-black px-2 py-1 rounded">Auto-loaded</span>
               </div>
               <div className="space-y-2">
                 <div>
@@ -268,7 +268,7 @@ export default function SubmitLSAGRegistration() {
                 <button
                   onClick={handleParseLSAG}
                   disabled={!lsagInput}
-                  className="mt-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white rounded-lg text-sm"
+                  className="mt-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-black rounded-lg text-sm"
                 >
                   Parse LSAG Signature
                 </button>
@@ -316,7 +316,7 @@ export default function SubmitLSAGRegistration() {
             <button
               onClick={handleConnectWallet}
               disabled={!lsagData || !contractAddress || isProcessing}
-              className="w-full bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+              className="w-full bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-black font-semibold py-3 px-6 rounded-lg transition-colors"
             >
               {isProcessing ? 'Connecting...' : 'Connect Wallet & Proceed'}
             </button>
@@ -369,14 +369,14 @@ export default function SubmitLSAGRegistration() {
               <button
                 onClick={handleSubmit}
                 disabled={isProcessing}
-                className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+                className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-black font-semibold py-3 px-6 rounded-lg transition-colors"
               >
                 {isProcessing ? 'Submitting to Blockchain...' : 'Submit Registration'}
               </button>
               <button
                 onClick={handleReset}
                 disabled={isProcessing}
-                className="px-6 py-3 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white rounded-lg"
+                className="px-6 py-3 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-black rounded-lg"
               >
                 Cancel
               </button>
@@ -450,13 +450,13 @@ export default function SubmitLSAGRegistration() {
             <div className="flex gap-4">
               <button
                 onClick={handleDownloadResult}
-                className="flex-1 bg-gray-800 hover:bg-gray-900 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+                className="flex-1 bg-gray-800 hover:bg-gray-900 text-black font-semibold py-3 px-6 rounded-lg transition-colors"
               >
                 Download Registration Result
               </button>
               <button
                 onClick={handleReset}
-                className="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg"
+                className="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-black rounded-lg"
               >
                 Register Another
               </button>

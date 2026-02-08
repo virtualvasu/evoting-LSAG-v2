@@ -19,7 +19,7 @@ export default function Home() {
             {/* Phase 1: Pre-Registration */}
             <div className="bg-white rounded-lg shadow-xl p-8 border-l-4 border-blue-500">
               <div className="flex items-center mb-6">
-                <div className="bg-blue-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg mr-4">
+                <div className="bg-blue-500 text-black rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg mr-4">
                   1
                 </div>
                 <div>
@@ -59,7 +59,7 @@ export default function Home() {
             {/* Phase 2: Registration */}
             <div className="bg-white rounded-lg shadow-xl p-8 border-l-4 border-green-500">
               <div className="flex items-center mb-6">
-                <div className="bg-green-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg mr-4">
+                <div className="bg-green-500 text-black rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg mr-4">
                   2
                 </div>
                 <div>
@@ -110,7 +110,7 @@ export default function Home() {
                   href="/submit-lsag"
                   className="block p-6 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
                 >
-                  <div className="text-white">
+                  <div className="text-black">
                     <div className="flex items-center mb-3">
                       <svg className="w-8 h-8 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -135,7 +135,7 @@ export default function Home() {
             {/* Phase 3: Voting */}
             <div className="bg-white rounded-lg shadow-xl p-8 border-l-4 border-red-500">
               <div className="flex items-center mb-6">
-                <div className="bg-red-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg mr-4">
+                <div className="bg-red-500 text-black rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg mr-4">
                   3
                 </div>
                 <div>
@@ -175,7 +175,7 @@ export default function Home() {
             {/* Phase 4: Tallying */}
             <div className="bg-white rounded-lg shadow-xl p-8 border-l-4 border-indigo-500">
               <div className="flex items-center mb-6">
-                <div className="bg-indigo-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg mr-4">
+                <div className="bg-indigo-500 text-black rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg mr-4">
                   4
                 </div>
                 <div>
@@ -190,7 +190,7 @@ export default function Home() {
                   href="/tally"
                   className="block p-6 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
                 >
-                  <div className="text-white">
+                  <div className="text-black">
                     <div className="flex items-center mb-3">
                       <svg className="w-8 h-8 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />

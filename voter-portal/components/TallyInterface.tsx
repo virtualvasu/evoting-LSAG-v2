@@ -257,7 +257,7 @@ export default function TallyInterface() {
             <button
               onClick={handleConnect}
               disabled={loading}
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold"
+              className="w-full bg-blue-600 text-black py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold"
             >
               {loading ? 'Connecting...' : '🔐 Connect Wallet'}
             </button>
@@ -360,7 +360,7 @@ export default function TallyInterface() {
           <button
             onClick={handleVerify}
             disabled={loading || !connected || !kv || !r}
-            className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold"
+            className="w-full bg-purple-600 text-black py-3 px-4 rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold"
           >
             {loading ? 'Verifying...' : '🔍 Verify Vote Integrity'}
           </button>
@@ -406,7 +406,7 @@ export default function TallyInterface() {
             <button
               onClick={handleTally}
               disabled={loading || !connected}
-              className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold text-lg"
+              className="w-full bg-green-600 text-black py-3 px-4 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold text-lg"
             >
               {loading ? 'Tallying...' : '📊 Tally Vote on Blockchain'}
             </button>
@@ -424,7 +424,7 @@ export default function TallyInterface() {
           <button
             onClick={handleGetResults}
             disabled={loading}
-            className="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 transition-colors font-semibold"
+            className="w-full bg-indigo-600 text-black py-3 px-4 rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 transition-colors font-semibold"
           >
             {loading ? 'Loading...' : '📈 View Current Results'}
           </button>

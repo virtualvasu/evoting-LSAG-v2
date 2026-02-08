@@ -214,7 +214,7 @@ export default function VotingInterface() {
             <button
               onClick={handleConnect}
               disabled={loading}
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold"
+              className="w-full bg-blue-600 text-black py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold"
             >
               {loading ? 'Connecting...' : '🔐 Connect Wallet'}
             </button>
@@ -268,7 +268,7 @@ export default function VotingInterface() {
                 <button
                   onClick={handleCheckVoteStatus}
                   disabled={loading || !kv}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 transition-colors"
+                  className="px-4 py-2 bg-purple-600 text-black rounded-lg hover:bg-purple-700 disabled:bg-gray-400 transition-colors"
                 >
                   Check Status
                 </button>
@@ -313,7 +313,7 @@ export default function VotingInterface() {
                     onClick={() => setCandidateChoice(candidate)}
                     className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-colors ${
                       candidateChoice === candidate
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-blue-600 text-black'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                     disabled={loading}
@@ -328,7 +328,7 @@ export default function VotingInterface() {
             <button
               onClick={handleGenerateVote}
               disabled={loading || !newPrivateKey || !kv || hasVoted === true}
-              className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold"
+              className="w-full bg-green-600 text-black py-3 px-4 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold"
             >
               {loading ? 'Generating...' : '🎲 Generate Vote'}
             </button>
@@ -397,13 +397,13 @@ export default function VotingInterface() {
               <button
                 onClick={handleCastVote}
                 disabled={loading || !connected}
-                className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold"
+                className="flex-1 bg-blue-600 text-black py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold"
               >
                 {loading ? 'Casting Vote...' : '📤 Cast Vote on Blockchain'}
               </button>
               <button
                 onClick={handleDownloadVote}
-                className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-semibold"
+                className="px-6 py-3 bg-gray-600 text-black rounded-lg hover:bg-gray-700 transition-colors font-semibold"
               >
                 💾 Download
               </button>
@@ -413,7 +413,7 @@ export default function VotingInterface() {
                   setError('');
                   setSuccess('');
                 }}
-                className="px-6 py-3 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition-colors font-semibold"
+                className="px-6 py-3 bg-gray-400 text-black rounded-lg hover:bg-gray-500 transition-colors font-semibold"
               >
                 ✖️ Cancel
               </button>

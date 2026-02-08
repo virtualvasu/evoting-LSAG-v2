@@ -60,7 +60,7 @@ export default function GenerateKeyPair() {
         <button
           onClick={handleGenerate}
           disabled={isGenerating}
-          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-black font-semibold py-3 px-6 rounded-lg transition-colors"
         >
           {isGenerating ? 'Generating...' : 'Generate New Key Pair'}
         </button>
@@ -89,7 +89,7 @@ export default function GenerateKeyPair() {
                   <h3 className="text-sm font-semibold text-red-900">Private Key (Keep Secret!)</h3>
                   <button
                     onClick={() => handleCopy(keyPair.privateKey, 'private')}
-                    className="text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
+                    className="text-xs bg-red-600 hover:bg-red-700 text-black px-3 py-1 rounded"
                   >
                     {copied === 'private' ? '✓ Copied' : 'Copy'}
                   </button>
@@ -105,7 +105,7 @@ export default function GenerateKeyPair() {
                   <h3 className="text-sm font-semibold text-green-900">Public Key (64 bytes, uncompressed)</h3>
                   <button
                     onClick={() => handleCopy(keyPair.publicKey, 'public')}
-                    className="text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded"
+                    className="text-xs bg-green-600 hover:bg-green-700 text-black px-3 py-1 rounded"
                   >
                     {copied === 'public' ? '✓ Copied' : 'Copy'}
                   </button>
@@ -121,7 +121,7 @@ export default function GenerateKeyPair() {
                   <h3 className="text-sm font-semibold text-blue-900">Public Key X</h3>
                   <button
                     onClick={() => handleCopy(keyPair.publicKeyX, 'x')}
-                    className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
+                    className="text-xs bg-blue-600 hover:bg-blue-700 text-black px-3 py-1 rounded"
                   >
                     {copied === 'x' ? '✓ Copied' : 'Copy'}
                   </button>
@@ -137,7 +137,7 @@ export default function GenerateKeyPair() {
                   <h3 className="text-sm font-semibold text-purple-900">Public Key Y</h3>
                   <button
                     onClick={() => handleCopy(keyPair.publicKeyY, 'y')}
-                    className="text-xs bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded"
+                    className="text-xs bg-purple-600 hover:bg-purple-700 text-black px-3 py-1 rounded"
                   >
                     {copied === 'y' ? '✓ Copied' : 'Copy'}
                   </button>
@@ -151,7 +151,7 @@ export default function GenerateKeyPair() {
             <div className="pt-4 border-t border-gray-200">
               <button
                 onClick={handleDownload}
-                className="w-full bg-gray-800 hover:bg-gray-900 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+                className="w-full bg-gray-800 hover:bg-gray-900 text-black font-semibold py-3 px-6 rounded-lg transition-colors"
               >
                 Download Key Pair as JSON
               </button>

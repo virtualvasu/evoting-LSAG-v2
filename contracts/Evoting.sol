@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./MessageHashUtils.sol";
 import "./ECOperations.sol";
 
@@ -12,7 +13,7 @@ interface ISecp256k1 {
     function Add(uint256 x1, uint256 y1, uint256 x2, uint256 y2) external view returns (uint256 x3, uint256 y3);
 }
 
-contract EVoting {
+contract EVoting is Ownable {
     using ECDSA for bytes32;
     using ECOperations for *;
     
@@ -48,42 +49,121 @@ contract EVoting {
         bytes32 voteHash;       // T[k][2] - Vote hash h_v (0 if not voted)
     }
 
+    // Election structure - contains all election-specific data
+    struct Election {
+        string electionId;
+        bytes1[] candidates;
+        RegistrationEntry[] registrationTable;
+        mapping(bytes1 => uint256) results;
+        bool isActive;
+        bool isCompleted;
+    }
+
     // Mappings
     mapping(bytes => VoterPublicKey) public publicKeys;
     
-    // Voter ring storage
+    // Voter ring storage (PERSISTENT - never reset)
     bytes32[] public voterRing;
     mapping(bytes32 => bytes) public hashToPublicKey;  // Map hash to actual public key
 
-    // Registration table T: stores LSAG signatures and corresponding public keys
-    RegistrationEntry[] public registrationTable;
-
-    // Results R[c]: maps candidate to vote count
-    mapping(bytes1 => uint256) public results;
-
-    // Election configuration
-    string public electionId;
-    bytes1[] public candidates;
+    // Current election (ELECTION-SPECIFIC - resets between elections)
+    Election public currentElection;
 
     // Events
     event PublicKeyStored(bytes signature, bytes publicKey);
-    event RegistrationSuccess(uint256 indexed kv, bytes publicKey);
-    event RegistrationFailed(string reason);
-    event VoteCasted(uint256 indexed kv, bytes32 indexed voteHash);
-    event VoteTallied(uint256 indexed kv, bytes1 indexed candidate);
+    event ElectionStarted(string indexed electionId, bytes1[] candidates);
+    event ElectionEnded(string indexed electionId);
+    event ElectionReset(string indexed electionId);
+    event RegistrationSuccess(string indexed electionId, uint256 indexed kv, bytes publicKey);
+    event RegistrationFailed(string indexed electionId, string reason);
+    event VoteCasted(string indexed electionId, uint256 indexed kv, bytes32 indexed voteHash);
+    event VoteTallied(string indexed electionId, uint256 indexed kv, bytes1 indexed candidate);
 
     // Constructor
-    constructor(address _secp256k1) {
+    constructor(address _secp256k1) Ownable(msg.sender) {
         require(_secp256k1 != address(0), "Invalid Secp256k1 address");
         secp256k1 = ISecp256k1(_secp256k1);
+    }
+
+    // -------- ELECTION LIFECYCLE MANAGEMENT -------- //
+
+    /**
+     * @dev Start a new election with specified candidates
+     * @param _electionId Unique identifier for the election
+     * @param _candidates Array of candidate choices (e.g., ['A', 'B', 'C'])
+     */
+    function startElection(string memory _electionId, bytes1[] memory _candidates) public onlyOwner {
+        require(!currentElection.isActive, "An election is already active");
+        require(_candidates.length > 0, "At least one candidate required");
+        require(bytes(_electionId).length > 0, "Election ID cannot be empty");
+
+        // Reset current election data
+        delete currentElection.registrationTable;
         
-        // Initialize election configuration
-        electionId = "election_001";
-        candidates.push(0x41); // 'A'
-        candidates.push(0x42); // 'B'
-        candidates.push(0x43); // 'C'
-        candidates.push(0x44); // 'D'
-        candidates.push(0x45); // 'E'
+        // Set new election configuration
+        currentElection.electionId = _electionId;
+        currentElection.candidates = _candidates;
+        currentElection.isActive = true;
+        currentElection.isCompleted = false;
+
+        // Reset results for all candidates
+        for (uint256 i = 0; i < _candidates.length; i++) {
+            currentElection.results[_candidates[i]] = 0;
+        }
+
+        emit ElectionStarted(_electionId, _candidates);
+    }
+
+    /**
+     * @dev End the current active election
+     */
+    function endElection() public onlyOwner {
+        require(currentElection.isActive, "No active election to end");
+        
+        currentElection.isActive = false;
+        currentElection.isCompleted = true;
+
+        emit ElectionEnded(currentElection.electionId);
+    }
+
+    /**
+     * @dev Reset current election data after results are stored off-chain
+     * This clears all election-specific data but keeps the voter ring intact
+     */
+    function resetElectionData() public onlyOwner {
+        require(currentElection.isCompleted, "Election must be completed before reset");
+        
+        string memory electionId = currentElection.electionId;
+        
+        // Clear election-specific data
+        delete currentElection.registrationTable;
+        delete currentElection.candidates;
+        currentElection.electionId = "";
+        currentElection.isActive = false;
+        currentElection.isCompleted = false;
+
+        // Note: voter ring (voterRing, publicKeys, hashToPublicKey) remains intact
+
+        emit ElectionReset(electionId);
+    }
+
+    /**
+     * @dev Get current election status
+     */
+    function getElectionStatus() public view returns (
+        string memory _electionId,
+        bool _isActive,
+        bool _isCompleted,
+        bytes1[] memory _candidates,
+        uint256 _registeredVoters
+    ) {
+        return (
+            currentElection.electionId,
+            currentElection.isActive,
+            currentElection.isCompleted,
+            currentElection.candidates,
+            currentElection.registrationTable.length
+        );
     }
 
     // -------- REGISTRATION PHASE -------- //
@@ -169,7 +249,7 @@ contract EVoting {
             bytes1[] memory _candidates
         ) 
     {
-        return (voterRing, electionId, candidates);
+        return (voterRing, currentElection.electionId, currentElection.candidates);
     }
 
     function createCertificate(
@@ -360,31 +440,33 @@ contract EVoting {
         LSAGSignature memory lsagSig,
         bytes memory voterPubKey
     ) public returns (uint256 kv) {
+        require(currentElection.isActive, "No active election");
+        
         // Step 1: LSAG.ver(L, Pu, σv) = 1
         require(LSAGver(electionIdHash, lsagSig), "LSAG verification failed");
         
         // Step 2: Check for linkability with existing registrations
         // if ∃ j ∈ {0,1,··· ,|T|−1}, LSAG.linkVer(Pu, L, L, σv, T[j][0]) = 1
-        for (uint256 j = 0; j < registrationTable.length; j++) {
-            if (LSAGlinkVer(lsagSig, registrationTable[j].lsagSig)) {
+        for (uint256 j = 0; j < currentElection.registrationTable.length; j++) {
+            if (LSAGlinkVer(lsagSig, currentElection.registrationTable[j].lsagSig)) {
                 // abort registration
-                emit RegistrationFailed("Invalid Registration - signature already used");
+                emit RegistrationFailed(currentElection.electionId, "Invalid Registration - signature already used");
                 revert("Invalid Registration - signature already used");
             }
         }
         
         // Step 3: Add to registration table
         // k := |T|
-        kv = registrationTable.length;
+        kv = currentElection.registrationTable.length;
         
         // T[k] := (σv, Pu', 0)
-        registrationTable.push(RegistrationEntry({
+        currentElection.registrationTable.push(RegistrationEntry({
             lsagSig: lsagSig,
             publicKey: voterPubKey,
             voteHash: bytes32(0)
         }));
         
-        emit RegistrationSuccess(kv, voterPubKey);
+        emit RegistrationSuccess(currentElection.electionId, kv, voterPubKey);
         
         return kv;
     }
@@ -406,10 +488,12 @@ contract EVoting {
         bytes32 s,
         uint8 v
     ) public returns (bool) {
-        // Step 1: Validate registration index
-        require(k < registrationTable.length, "Invalid registration index");
+        require(currentElection.isActive, "No active election");
         
-        RegistrationEntry storage entry = registrationTable[k];
+        // Step 1: Validate registration index
+        require(k < currentElection.registrationTable.length, "Invalid registration index");
+        
+        RegistrationEntry storage entry = currentElection.registrationTable[k];
         
         // Step 2: Check if voter has already voted (prevent rewrites)
         // T[k][2] should be 0 (not voted) to allow new vote
@@ -429,7 +513,7 @@ contract EVoting {
         entry.voteHash = h;
         
         // Step 6: Emit event
-        emit VoteCasted(k, h);
+        emit VoteCasted(currentElection.electionId, k, h);
         
         return true;
     }
@@ -462,8 +546,8 @@ contract EVoting {
      * @return Vote hash (0 if not voted)
      */
     function getVoteHash(uint256 k) public view returns (bytes32) {
-        require(k < registrationTable.length, "Invalid registration index");
-        return registrationTable[k].voteHash;
+        require(k < currentElection.registrationTable.length, "Invalid registration index");
+        return currentElection.registrationTable[k].voteHash;
     }
 
     /**
@@ -472,15 +556,15 @@ contract EVoting {
      * @return True if voter has cast a vote
      */
     function hasVoted(uint256 k) public view returns (bool) {
-        require(k < registrationTable.length, "Invalid registration index");
-        return registrationTable[k].voteHash != bytes32(0);
+        require(k < currentElection.registrationTable.length, "Invalid registration index");
+        return currentElection.registrationTable[k].voteHash != bytes32(0);
     }
 
     /**
      * @dev Get registration table size
      */
     function getRegistrationTableSize() public view returns (uint256) {
-        return registrationTable.length;
+        return currentElection.registrationTable.length;
     }
 
     /**
@@ -494,8 +578,8 @@ contract EVoting {
         bytes memory publicKey,
         bytes32 voteHash
     ) {
-        require(index < registrationTable.length, "Index out of bounds");
-        RegistrationEntry memory entry = registrationTable[index];
+        require(index < currentElection.registrationTable.length, "Index out of bounds");
+        RegistrationEntry memory entry = currentElection.registrationTable[index];
         return (
             entry.lsagSig.keyImageX,
             entry.lsagSig.keyImageY,
@@ -516,14 +600,23 @@ contract EVoting {
      * @param r Random number used in vote creation
      */
     function BBtally(uint256 k, bytes1 c, bytes memory r) public {
-        // Step 1: Validate registration index
-        require(k < registrationTable.length, "Invalid registration index");
+        require(currentElection.isActive, "No active election");
         
-        // Step 2: Validate candidate
-        require(c >= 'A' && c <= 'E', "Invalid candidate choice");
+        // Step 1: Validate registration index
+        require(k < currentElection.registrationTable.length, "Invalid registration index");
+        
+        // Step 2: Validate candidate is in current election
+        bool validCandidate = false;
+        for (uint256 i = 0; i < currentElection.candidates.length; i++) {
+            if (currentElection.candidates[i] == c) {
+                validCandidate = true;
+                break;
+            }
+        }
+        require(validCandidate, "Invalid candidate choice for this election");
         
         // Step 3: Get stored vote hash from T[k][2]
-        bytes32 storedHash = registrationTable[k].voteHash;
+        bytes32 storedHash = currentElection.registrationTable[k].voteHash;
         require(storedHash != bytes32(0), "No vote found for this voter");
         
         // Step 4: Recalculate hash: H(c ∥ r)
@@ -534,33 +627,39 @@ contract EVoting {
         require(storedHash == calculatedHash, "Vote integrity check failed");
         
         // Step 6: Increment result for candidate
-        results[c]++;
+        currentElection.results[c]++;
         
         // Step 7: Emit event
-        emit VoteTallied(k, c);
+        emit VoteTallied(currentElection.electionId, k, c);
     }
 
     /**
      * @dev Get vote count for a candidate
-     * @param c Candidate choice (A-E as bytes1)
+     * @param c Candidate choice (bytes1)
      * @return Vote count for candidate
      */
     function getVoteCount(bytes1 c) public view returns (uint256) {
-        require(c >= 'A' && c <= 'E', "Invalid candidate choice");
-        return results[c];
+        // Check if candidate exists in current election
+        bool validCandidate = false;
+        for (uint256 i = 0; i < currentElection.candidates.length; i++) {
+            if (currentElection.candidates[i] == c) {
+                validCandidate = true;
+                break;
+            }
+        }
+        require(validCandidate, "Invalid candidate choice for current election");
+        return currentElection.results[c];
     }
 
     /**
-     * @dev Get all results
-     * @return Array of vote counts for candidates A-E
+     * @dev Get all results for current election
+     * @return Array of vote counts for current election candidates
      */
     function getAllResults() public view returns (uint256[] memory) {
-        uint256[] memory counts = new uint256[](5);
-        counts[0] = results['A'];
-        counts[1] = results['B'];
-        counts[2] = results['C'];
-        counts[3] = results['D'];
-        counts[4] = results['E'];
+        uint256[] memory counts = new uint256[](currentElection.candidates.length);
+        for (uint256 i = 0; i < currentElection.candidates.length; i++) {
+            counts[i] = currentElection.results[currentElection.candidates[i]];
+        }
         return counts;
     }
 }

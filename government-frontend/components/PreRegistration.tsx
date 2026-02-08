@@ -140,7 +140,7 @@ export default function PreRegistration() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
+          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-black font-semibold py-2 px-4 rounded-lg transition duration-200"
         >
           {loading ? '⏳ Processing...' : '✅ Pre-Register Voter'}
         </button>
@@ -173,7 +173,7 @@ export default function PreRegistration() {
               {/* Download Button */}
               <button
                 onClick={downloadCertificate}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center gap-2"
+                className="w-full bg-green-600 hover:bg-green-700 text-black font-semibold py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center gap-2"
               >
                 📥 Download Certificate as JSON
               </button>

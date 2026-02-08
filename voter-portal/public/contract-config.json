@@ -1,5 +1,5 @@
 {
-  "contractAddress": "0xe5a0ca3FFE17D9D1903FB618dE4E7Adc1d133386",
+  "contractAddress": "0x8e244A6683FF1970A677d0c8373B3dF67BA0b017",
   "rpcUrl": "http://10.10.0.61:8550",
   "network": "iitbh",
   "chainId": "491002",
@@ -43,6 +43,92 @@
       "type": "error"
     },
     {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnableInvalidOwner",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "OwnableUnauthorizedAccount",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "string",
+          "name": "electionId",
+          "type": "string"
+        }
+      ],
+      "name": "ElectionEnded",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "string",
+          "name": "electionId",
+          "type": "string"
+        }
+      ],
+      "name": "ElectionReset",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "string",
+          "name": "electionId",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes1[]",
+          "name": "candidates",
+          "type": "bytes1[]"
+        }
+      ],
+      "name": "ElectionStarted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipTransferred",
+      "type": "event"
+    },
+    {
       "anonymous": false,
       "inputs": [
         {
@@ -65,6 +151,12 @@
       "anonymous": false,
       "inputs": [
         {
+          "indexed": true,
+          "internalType": "string",
+          "name": "electionId",
+          "type": "string"
+        },
+        {
           "indexed": false,
           "internalType": "string",
           "name": "reason",
@@ -77,6 +169,12 @@
     {
       "anonymous": false,
       "inputs": [
+        {
+          "indexed": true,
+          "internalType": "string",
+          "name": "electionId",
+          "type": "string"
+        },
         {
           "indexed": true,
           "internalType": "uint256",
@@ -98,6 +196,12 @@
       "inputs": [
         {
           "indexed": true,
+          "internalType": "string",
+          "name": "electionId",
+          "type": "string"
+        },
+        {
+          "indexed": true,
           "internalType": "uint256",
           "name": "kv",
           "type": "uint256"
@@ -115,6 +219,12 @@
     {
       "anonymous": false,
       "inputs": [
+        {
+          "indexed": true,
+          "internalType": "string",
+          "name": "electionId",
+          "type": "string"
+        },
         {
           "indexed": true,
           "internalType": "uint256",
@@ -361,25 +471,6 @@
     {
       "inputs": [
         {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "candidates",
-      "outputs": [
-        {
-          "internalType": "bytes1",
-          "name": "",
-          "type": "bytes1"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
           "internalType": "bytes",
           "name": "sigma_tilde_v",
           "type": "bytes"
@@ -445,15 +536,32 @@
     },
     {
       "inputs": [],
-      "name": "electionId",
+      "name": "currentElection",
       "outputs": [
         {
           "internalType": "string",
-          "name": "",
+          "name": "electionId",
           "type": "string"
+        },
+        {
+          "internalType": "bool",
+          "name": "isActive",
+          "type": "bool"
+        },
+        {
+          "internalType": "bool",
+          "name": "isCompleted",
+          "type": "bool"
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "endElection",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -464,6 +572,39 @@
           "internalType": "uint256[]",
           "name": "",
           "type": "uint256[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getElectionStatus",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "_electionId",
+          "type": "string"
+        },
+        {
+          "internalType": "bool",
+          "name": "_isActive",
+          "type": "bool"
+        },
+        {
+          "internalType": "bool",
+          "name": "_isCompleted",
+          "type": "bool"
+        },
+        {
+          "internalType": "bytes1[]",
+          "name": "_candidates",
+          "type": "bytes1[]"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_registeredVoters",
+          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -684,6 +825,19 @@
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "bytes",
@@ -708,73 +862,17 @@
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "registrationTable",
-      "outputs": [
-        {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "keyImageX",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "keyImageY",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "c",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256[]",
-              "name": "s",
-              "type": "uint256[]"
-            }
-          ],
-          "internalType": "struct EVoting.LSAGSignature",
-          "name": "lsagSig",
-          "type": "tuple"
-        },
-        {
-          "internalType": "bytes",
-          "name": "publicKey",
-          "type": "bytes"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "voteHash",
-          "type": "bytes32"
-        }
-      ],
-      "stateMutability": "view",
+      "inputs": [],
+      "name": "renounceOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "bytes1",
-          "name": "",
-          "type": "bytes1"
-        }
-      ],
-      "name": "results",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
+      "inputs": [],
+      "name": "resetElectionData",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -788,6 +886,24 @@
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "_electionId",
+          "type": "string"
+        },
+        {
+          "internalType": "bytes1[]",
+          "name": "_candidates",
+          "type": "bytes1[]"
+        }
+      ],
+      "name": "startElection",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -826,6 +942,19 @@
         }
       ],
       "name": "storePub",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "transferOwnership",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

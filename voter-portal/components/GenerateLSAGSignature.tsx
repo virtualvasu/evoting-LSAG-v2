@@ -143,7 +143,7 @@ export default function GenerateLSAGSignature() {
             <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-semibold text-gray-800">Blockchain Configuration</h3>
-                <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">Auto-loaded</span>
+                <span className="text-xs bg-blue-600 text-black px-2 py-1 rounded">Auto-loaded</span>
               </div>
               <div className="space-y-2">
                 <div>
@@ -240,7 +240,7 @@ export default function GenerateLSAGSignature() {
             <button
               onClick={handleGenerate}
               disabled={isProcessing}
-              className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+              className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-black font-semibold py-3 px-6 rounded-lg transition-colors"
             >
               {isProcessing ? 'Generating LSAG Signature...' : 'Generate LSAG Signature'}
             </button>
@@ -335,13 +335,13 @@ export default function GenerateLSAGSignature() {
             <div className="flex gap-4">
               <button
                 onClick={handleDownloadResult}
-                className="flex-1 bg-gray-800 hover:bg-gray-900 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+                className="flex-1 bg-gray-800 hover:bg-gray-900 text-black font-semibold py-3 px-6 rounded-lg transition-colors"
               >
                 Download Signature as JSON
               </button>
               <button
                 onClick={handleReset}
-                className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg"
+                className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-black rounded-lg"
               >
                 Generate Another
               </button>

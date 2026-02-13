@@ -23,6 +23,9 @@ export default function TallyInterface() {
   const [results, setResults] = useState<ElectionResults | null>(null);
   const [showResults, setShowResults] = useState(false);
 
+  // Available candidates for current election
+  const [availableCandidates, setAvailableCandidates] = useState<string[]>([]);
+
   // Verification
   const [verification, setVerification] = useState<{
     valid: boolean;
@@ -80,6 +83,17 @@ export default function TallyInterface() {
       setWalletAddress(address);
       setConnected(true);
       setSuccess(`Connected: ${address}`);
+
+      // Fetch available candidates for the current election
+      try {
+        const candidates = await tallyService.getElectionCandidates();
+        setAvailableCandidates(candidates);
+        if (candidates.length > 0) {
+          setCandidateChoice(candidates[0] as Candidate);
+        }
+      } catch (err: any) {
+        console.warn('Could not fetch election candidates:', err);
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -323,6 +337,29 @@ export default function TallyInterface() {
             Step 2: Reveal Vote Data
           </h2>
 
+          {/* Available Candidates Info */}
+          {availableCandidates.length > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-gray-600 mb-2">
+                <strong>Valid Candidates for This Election:</strong>
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {availableCandidates.map((candidate) => (
+                  <span
+                    key={candidate}
+                    className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                      candidateChoice === candidate
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-blue-200 text-blue-800'
+                    }`}
+                  >
+                    {candidate}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Registration Index */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -336,6 +373,43 @@ export default function TallyInterface() {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               disabled={loading}
             />
+          </div>
+
+          {/* Candidate Choice */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Candidate Choice (c)
+            </label>
+            {availableCandidates.length > 0 ? (
+              <select
+                value={candidateChoice}
+                onChange={(e) => setCandidateChoice(e.target.value as Candidate)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={loading}
+              >
+                {availableCandidates.map((candidate) => (
+                  <option key={candidate} value={candidate}>
+                    {candidate}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <select
+                value={candidateChoice}
+                onChange={(e) => setCandidateChoice(e.target.value as Candidate)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={loading}
+              >
+                {CANDIDATES.map((candidate) => (
+                  <option key={candidate} value={candidate}>
+                    {candidate}
+                  </option>
+                ))}
+              </select>
+            )}
+            <p className="text-xs text-gray-500 mt-1">
+              Select the candidate you voted for
+            </p>
           </div>
 
           {/* Random Number */}

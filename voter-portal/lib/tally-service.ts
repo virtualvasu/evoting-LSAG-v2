@@ -161,6 +161,23 @@ export class TallyService {
   }
 
   /**
+   * Get current election status including available candidates
+   */
+  async getElectionCandidates(): Promise<string[]> {
+    if (!this.contract) {
+      throw new Error('Contract not initialized');
+    }
+
+    try {
+      const [, , , candidatesBytes] = await this.contract.getElectionStatus();
+      // Convert bytes1 array to string candidates
+      return candidatesBytes.map((c: any) => String.fromCharCode(parseInt(c, 16)));
+    } catch (error: any) {
+      throw new Error(`Failed to get election status: ${error.message}`);
+    }
+  }
+
+  /**
    * Tally a vote by revealing (c, r)
    * Calls BB.tally(k, c, r) on blockchain
    * 
@@ -193,6 +210,23 @@ export class TallyService {
       console.log('Registration index:', kv);
       console.log('Candidate:', candidateChoice);
       console.log('Random:', r.substring(0, 20) + '...');
+
+      // Fetch current election's available candidates
+      let electionCandidates: string[] = [];
+      try {
+        electionCandidates = await this.getElectionCandidates();
+        console.log('Election candidates:', electionCandidates);
+      } catch (err) {
+        console.warn('Could not fetch election candidates:', err);
+      }
+
+      // Validate candidate is in current election
+      if (electionCandidates.length > 0 && !electionCandidates.includes(candidateChoice)) {
+        throw new Error(
+          `Candidate '${candidateChoice}' is not valid for this election. ` +
+          `Valid candidates are: ${electionCandidates.join(', ')}`
+        );
+      }
 
       // Verify locally first
       const verification = await this.verifyVoteIntegrity(

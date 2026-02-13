@@ -282,9 +282,7 @@ export class VotingService {
     }
 
     try {
-      const entry = await this.contract.registrationTable(kv);
-      // Check if voteHash is not zero
-      return entry.voteHash !== ethers.ZeroHash;
+      return await this.contract.hasVoted(kv);
     } catch (error) {
       console.error('Error checking vote status:', error);
       throw error;

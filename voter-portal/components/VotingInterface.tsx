@@ -113,6 +113,13 @@ export default function VotingInterface() {
       return;
     }
 
+    // Validate private key format
+    const cleanKey = newPrivateKey.startsWith('0x') ? newPrivateKey.slice(2) : newPrivateKey;
+    if (!/^[0-9a-fA-F]{64}$/.test(cleanKey)) {
+      setError('Invalid private key format. Must be 64 hexadecimal characters.');
+      return;
+    }
+
     setLoading(true);
     setError('');
     setSuccess('');
@@ -291,13 +298,13 @@ export default function VotingInterface() {
               <input
                 type="password"
                 value={newPrivateKey}
-                onChange={(e) => setNewPrivateKey(e.target.value)}
-                placeholder="0x..."
+                onChange={(e) => setNewPrivateKey(e.target.value.trim())}
+                placeholder="0x... or 64 hex characters"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
                 disabled={loading}
               />
               <p className="text-xs text-gray-500 mt-1">
-                The new private key you generated during registration
+                The new private key you generated during registration (64 hexadecimal characters)
               </p>
             </div>
 

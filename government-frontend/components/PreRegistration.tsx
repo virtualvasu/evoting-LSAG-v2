@@ -78,7 +78,7 @@ export default function PreRegistration() {
     <div className="space-y-8">
       {/* Title */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">📋 Voter Pre-Registration</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Voter Pre-Registration</h2>
         <p className="text-gray-600">Register a new voter with their public key and credentials</p>
       </div>
 
@@ -140,22 +140,22 @@ export default function PreRegistration() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-black font-semibold py-2 px-4 rounded-lg transition duration-200"
+          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
         >
-          {loading ? '⏳ Processing...' : '✅ Pre-Register Voter'}
+          {loading ? 'Processing...' : 'Pre-Register Voter'}
         </button>
       </form>
 
       {/* Success Response */}
       {response && response.success && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <h3 className="text-lg font-semibold text-green-800 mb-2">✅ Registration Successful!</h3>
+          <h3 className="text-lg font-semibold text-green-800 mb-2">Registration Successful!</h3>
           <p className="text-green-700 mb-2">{response.message}</p>
           
           {/* Important Notice */}
           <div className="bg-blue-50 border border-blue-300 rounded-lg p-3 mb-4">
             <p className="text-sm text-blue-800">
-              <strong>🔒 Security Notice:</strong> Certificate is generated in-memory and is not saved to the project directory. 
+              <strong>Security Notice:</strong> Certificate is generated in-memory and is not saved to the project directory. 
               Only the voter can see and download their certificate for privacy and security.
             </p>
           </div>
@@ -164,7 +164,7 @@ export default function PreRegistration() {
             <div className="space-y-4">
               {/* Certificate Display */}
               <div className="bg-white p-4 rounded border border-green-300">
-                <h4 className="font-semibold text-gray-900 mb-3">📋 Voter Certificate (CERT_{response.studentId}.json)</h4>
+                <h4 className="font-semibold text-gray-900 mb-3">Voter Certificate (CERT_{response.studentId}.json)</h4>
                 <div className="bg-gray-50 p-3 rounded border border-gray-300 font-mono text-xs text-gray-700 overflow-x-auto max-h-64 overflow-y-auto">
                   <pre>{JSON.stringify(response.certificate, null, 2)}</pre>
                 </div>
@@ -173,9 +173,9 @@ export default function PreRegistration() {
               {/* Download Button */}
               <button
                 onClick={downloadCertificate}
-                className="w-full bg-green-600 hover:bg-green-700 text-black font-semibold py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center gap-2"
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center gap-2"
               >
-                📥 Download Certificate as JSON
+                Download Certificate as JSON
               </button>
 
               {/* Instructions */}
@@ -188,7 +188,7 @@ export default function PreRegistration() {
           )}
           
           <p className="text-sm text-green-600 mt-3">
-            📝 Next Step: Voter uses this certificate for registration process
+            Next Step: Voter uses this certificate for registration process
           </p>
         </div>
       )}
@@ -196,7 +196,7 @@ export default function PreRegistration() {
       {/* Error Response */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h3 className="text-lg font-semibold text-red-800 mb-2">❌ Registration Failed</h3>
+          <h3 className="text-lg font-semibold text-red-800 mb-2">Registration Failed</h3>
           <p className="text-red-700 font-mono text-sm break-all">{error}</p>
         </div>
       )}
@@ -204,14 +204,14 @@ export default function PreRegistration() {
       {/* Error from API */}
       {response && !response.success && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h3 className="text-lg font-semibold text-red-800 mb-2">❌ Registration Failed</h3>
+          <h3 className="text-lg font-semibold text-red-800 mb-2">Registration Failed</h3>
           <p className="text-red-700">{response.message || response.error}</p>
         </div>
       )}
 
       {/* Instructions */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="font-semibold text-blue-900 mb-2">📌 Instructions:</h4>
+        <h4 className="font-semibold text-blue-900 mb-2">Instructions:</h4>
         <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
           <li>Voter generates keypair using: <code className="bg-blue-100 px-2 py-1 rounded">node scripts/generate-keypair.js</code></li>
           <li>Enter voter name, public key (64 bytes), and student ID</li>

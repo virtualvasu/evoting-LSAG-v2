@@ -136,6 +136,24 @@ export class VotingService {
         );
       }
 
+      // Validate private key format
+      let cleanPrivateKey = newPrivateKey.startsWith('0x') 
+        ? newPrivateKey.slice(2) 
+        : newPrivateKey;
+      
+      // Pad with leading zero if needed (common case for keys that start with 0)
+      if (cleanPrivateKey.length === 63 && /^[0-9a-fA-F]{63}$/.test(cleanPrivateKey)) {
+        cleanPrivateKey = '0' + cleanPrivateKey;
+      }
+      
+      if (!/^[0-9a-fA-F]{64}$/.test(cleanPrivateKey)) {
+        throw new Error(`Invalid private key format. Must be 64 hexadecimal characters. Current length: ${cleanPrivateKey.length}`);
+      }
+
+      if (cleanPrivateKey === '0'.repeat(64)) {
+        throw new Error('Invalid private key. Cannot be all zeros.');
+      }
+
       console.log('Generating vote...');
       console.log('Candidate:', candidateChoice);
       console.log('Registration index (kv):', kv);
@@ -158,14 +176,12 @@ export class VotingService {
       // Convert candidate to bytes1
       const cByte = ethers.toBeHex(c.charCodeAt(0), 1);
       const messageToHash = ethers.concat([cByte, rHex]);
-      const h_vHex = ethers.keccak256(messageToHash);
+      const h_vHex = ethers.zeroPadValue(ethers.keccak256(messageToHash), 32);
 
       console.log('Generated hash h_v:', h_vHex);
 
       // Step 4: Sign h_v with new private key using PKS (Ethereum signing)
-      const privateKeyHex = newPrivateKey.startsWith('0x')
-        ? newPrivateKey
-        : '0x' + newPrivateKey;
+      const privateKeyHex = '0x' + cleanPrivateKey;
 
       const wallet = new ethers.Wallet(privateKeyHex);
 
@@ -180,8 +196,8 @@ export class VotingService {
       const sig = ethers.Signature.from(signature);
 
       const sigma_v_prime = {
-        r: sig.r,
-        s: sig.s,
+        r: ethers.zeroPadValue(sig.r, 32),
+        s: ethers.zeroPadValue(sig.s, 32),
         v: sig.v,
       };
 

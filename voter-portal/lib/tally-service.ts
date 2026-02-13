@@ -288,25 +288,48 @@ export class TallyService {
     try {
       const allResults = await this.contract.getAllResults();
       
-      let total = BigInt(0);
+      console.log('Raw results from contract:', allResults);
+      console.log('Results array length:', allResults.length);
+      
+      // Check if we have the expected number of candidates
+      if (!allResults || allResults.length === 0) {
+        throw new Error('No election results available. Election may not be initialized.');
+      }
+      
+      // Initialize results with 0s for all candidates
       const results: ElectionResults = {
-        A: allResults[0].toString(),
-        B: allResults[1].toString(),
-        C: allResults[2].toString(),
-        D: allResults[3].toString(),
-        E: allResults[4].toString(),
+        A: '0',
+        B: '0', 
+        C: '0',
+        D: '0',
+        E: '0',
         total: '0',
       };
-
-      // Calculate total
-      for (let i = 0; i < 5; i++) {
-        total += allResults[i];
+      
+      // Map results to candidates (assuming order A, B, C, D, E)
+      const candidates = ['A', 'B', 'C', 'D', 'E'] as const;
+      let total = BigInt(0);
+      
+      for (let i = 0; i < Math.min(allResults.length, candidates.length); i++) {
+        const count = BigInt(allResults[i] || 0);
+        results[candidates[i]] = count.toString();
+        total += count;
       }
+      
       results.total = total.toString();
 
       return results;
     } catch (error: any) {
       console.error('Error fetching results:', error);
+      
+      // Try to get more debugging info
+      try {
+        const electionStatus = await this.getElectionStatus();
+        console.log('Election status for debugging:', electionStatus);
+      } catch (debugError) {
+        console.error('Could not fetch election status for debugging:', debugError);
+      }
+      
       throw new Error(`Failed to get results: ${error.message}`);
     }
   }
@@ -358,6 +381,25 @@ export class TallyService {
       return hash;
     } catch (error: any) {
       console.error('Error fetching vote hash:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check election status and configuration
+   */
+  async getElectionStatus(): Promise<any> {
+    if (!this.contract) {
+      throw new Error('Contract not initialized');
+    }
+
+    try {
+      // Try to get current election info
+      const currentElection = await this.contract.currentElection();
+      console.log('Current Election:', currentElection);
+      return currentElection;
+    } catch (error: any) {
+      console.error('Error fetching election status:', error);
       throw error;
     }
   }

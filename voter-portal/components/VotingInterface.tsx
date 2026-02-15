@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { VotingService, DEFAULT_CANDIDATES, type Candidate, type VoteData } from '@/lib/voting-service';
+import { BlockchainService } from '@/lib/blockchain-utils';
 
 export default function VotingInterface() {
   const [contractAddress, setContractAddress] = useState('');
@@ -26,6 +27,17 @@ export default function VotingInterface() {
   // Service instance
   const [votingService, setVotingService] = useState<VotingService | null>(null);
 
+  // Phase checking state
+  const [electionStatus, setElectionStatus] = useState<{
+    electionId: string;
+    isActive: boolean;
+    phaseString: string;
+    currentPhase: number;
+    registeredVoters: string;
+  } | null>(null);
+  const [isCheckingPhase, setIsCheckingPhase] = useState(false);
+  const [rpcUrl, setRpcUrl] = useState('http://10.10.0.61:8550');
+
   // Load contract config on mount
   useEffect(() => {
     loadContractConfig();
@@ -46,14 +58,51 @@ export default function VotingInterface() {
       
       const address = data.address || data.contractAddress;
       setContractAddress(address);
+      setRpcUrl(data.rpcUrl || 'http://10.10.0.61:8550');
 
       // Initialize service
       const service = new VotingService(address);
       await service.loadABI();
       setVotingService(service);
+      
+      // Check election phase
+      await checkElectionPhase(address, data.rpcUrl || 'http://10.10.0.61:8550');
     } catch (err: any) {
       setError(err.message);
       console.error('Failed to load contract config:', err);
+    }
+  };
+
+  const checkElectionPhase = async (address?: string, rpc?: string) => {
+    setIsCheckingPhase(true);
+    try {
+      const blockchain = new BlockchainService(
+        address || contractAddress,
+        rpc || rpcUrl
+      );
+      await blockchain.connectReadOnly();
+      
+      const status = await blockchain.getElectionStatus();
+      setElectionStatus({
+        electionId: status.electionId,
+        isActive: status.isActive,
+        phaseString: status.phaseString,
+        currentPhase: status.currentPhase,
+        registeredVoters: status.registeredVoters.toString()
+      });
+      
+      // Show warning if not in voting phase
+      if (status.currentPhase !== 2) {
+        setError(
+          `Voting is currently NOT ACTIVE. Current phase: ${status.phaseString}. ` +
+          `Please wait for the government authority to start the voting phase.`
+        );
+      }
+    } catch (err) {
+      console.error('Failed to check election phase:', err);
+      setError('Warning: Could not verify election phase. ' + (err as Error).message);
+    } finally {
+      setIsCheckingPhase(false);
     }
   };
 
@@ -172,11 +221,28 @@ export default function VotingInterface() {
       return;
     }
 
+    // Check if voting phase is active
+    if (electionStatus && electionStatus.currentPhase !== 2) {
+      setError(
+        `Cannot cast vote: Voting phase is not active. Current phase: ${electionStatus.phaseString}. ` +
+        `Please wait for the government authority to start the voting phase.`
+      );
+      return;
+    }
+
     setLoading(true);
     setError('');
     setSuccess('');
 
     try {
+      // Double-check phase right before submitting
+      const blockchain = new BlockchainService(contractAddress, rpcUrl);
+      await blockchain.connectReadOnly();
+      const isVotingActive = await blockchain.isVotingPhaseActive();
+      if (!isVotingActive) {
+        throw new Error('Voting phase is not active. Please refresh and check the current phase.');
+      }
+
       const result = await votingService.castVote(voteData);
 
       if (result.success) {
@@ -190,7 +256,12 @@ export default function VotingInterface() {
         setError(result.error || 'Failed to cast vote');
       }
     } catch (err: any) {
-      setError(err.message);
+      const errorMessage = (err as Error).message;
+      if (errorMessage.includes('Operation not allowed in current phase')) {
+        setError('Vote casting failed: Voting phase is not active. The government authority needs to start the voting phase first.');
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -228,6 +299,60 @@ export default function VotingInterface() {
             <p className="text-xs font-mono text-gray-800 break-all">
               {contractAddress}
             </p>
+          </div>
+        )}
+
+        {/* Election Phase Status */}
+        {electionStatus && (
+          <div className={`p-4 rounded-lg border-l-4 mb-6 ${
+            electionStatus.currentPhase === 2 
+              ? 'bg-green-50 border-green-500' 
+              : 'bg-yellow-50 border-yellow-500'
+          }`}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-gray-800">Election Phase Status</h3>
+              <button
+                onClick={() => checkElectionPhase()}
+                disabled={isCheckingPhase}
+                className="text-xs bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white px-3 py-1 rounded"
+              >
+                {isCheckingPhase ? 'Checking...' : 'Refresh'}
+              </button>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div>
+                <span className="font-medium text-gray-700">Election ID:</span>{' '}
+                <span className="text-gray-900">{electionStatus.electionId || 'None'}</span>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Election Active:</span>{' '}
+                <span className={electionStatus.isActive ? 'text-green-700 font-semibold' : 'text-red-700 font-semibold'}>
+                  {electionStatus.isActive ? 'Yes' : 'No'}
+                </span>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Current Phase:</span>{' '}
+                <span className={`font-semibold ${
+                  electionStatus.currentPhase === 2 ? 'text-green-700' : 'text-yellow-700'
+                }`}>
+                  {electionStatus.phaseString}
+                </span>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Registered Voters:</span>{' '}
+                <span className="text-gray-900">{electionStatus.registeredVoters}</span>
+              </div>
+              {electionStatus.currentPhase === 2 && (
+                <div className="mt-2 p-2 bg-green-100 rounded text-green-800 font-medium">
+                  ✓ Voting is ACTIVE - You can cast your vote now
+                </div>
+              )}
+              {electionStatus.currentPhase !== 2 && (
+                <div className="mt-2 p-2 bg-yellow-100 rounded text-yellow-800 font-medium">
+                  ⚠ Voting is NOT ACTIVE - Wait for government to start voting phase
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -419,10 +544,13 @@ export default function VotingInterface() {
             <div className="flex gap-3">
               <button
                 onClick={handleCastVote}
-                disabled={loading || !connected}
+                disabled={loading || !connected || (electionStatus && electionStatus.currentPhase !== 2)}
                 className="flex-1 bg-blue-600 text-black py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold"
               >
-                {loading ? 'Casting Vote...' : '📤 Cast Vote on Blockchain'}
+                {loading ? 'Casting Vote...' : 
+                 (electionStatus && electionStatus.currentPhase !== 2) ? 
+                 `Cannot Cast - Phase: ${electionStatus.phaseString}` : 
+                 '📤 Cast Vote on Blockchain'}
               </button>
               <button
                 onClick={handleDownloadVote}

@@ -26,9 +26,9 @@ export interface VoteCastResult {
   error?: string;
 }
 
-// List of valid candidates
-export const CANDIDATES = ['A', 'B', 'C', 'D', 'E'] as const;
-export type Candidate = typeof CANDIDATES[number];
+// List of default candidates (can be updated based on current election)
+export const DEFAULT_CANDIDATES = ['Alice', 'Bob', 'Charlie', 'David', 'Eve'] as const;
+export type Candidate = string;
 
 /**
  * Voting Service for E-Voting System
@@ -130,12 +130,6 @@ export class VotingService {
         throw new Error('Missing required parameters');
       }
 
-      if (!CANDIDATES.includes(candidateChoice)) {
-        throw new Error(
-          `Invalid candidate choice. Valid candidates: ${CANDIDATES.join(', ')}`
-        );
-      }
-
       // Validate private key format
       let cleanPrivateKey = newPrivateKey.startsWith('0x') 
         ? newPrivateKey.slice(2) 
@@ -158,8 +152,8 @@ export class VotingService {
       console.log('Candidate:', candidateChoice);
       console.log('Registration index (kv):', kv);
 
-      // Step 1: Candidate choice
-      const c = candidateChoice.toUpperCase();
+      // Step 1: Candidate choice (keep original case)
+      const c = candidateChoice;
 
       // Step 2: Generate random number r (32 bytes)
       const randomBytes = new Uint8Array(32);
@@ -173,10 +167,11 @@ export class VotingService {
       console.log('Generated random r');
 
       // Step 3: Calculate h_v = keccak256(c || r)
-      // Convert candidate to bytes1
-      const cByte = ethers.toBeHex(c.charCodeAt(0), 1);
-      const messageToHash = ethers.concat([cByte, rHex]);
-      const h_vHex = ethers.zeroPadValue(ethers.keccak256(messageToHash), 32);
+      // Use full candidate string (must match contract's abi.encodePacked)
+      const cBytes = ethers.toUtf8Bytes(c);
+      const rBytes = ethers.getBytes(rHex);
+      const messageToHash = ethers.concat([cBytes, rBytes]);
+      const h_vHex = ethers.keccak256(messageToHash);
 
       console.log('Generated hash h_v:', h_vHex);
 
@@ -306,6 +301,22 @@ export class VotingService {
   }
 
   /**
+   * Get current election candidates
+   */
+  async getElectionCandidates(): Promise<string[]> {
+    if (!this.contract) {
+      throw new Error('Contract not initialized');
+    }
+
+    try {
+      return await this.contract.getCandidates();
+    } catch (error: any) {
+      console.error('Error fetching election candidates:', error);
+      throw new Error(`Failed to get election candidates: ${error.message}`);
+    }
+  }
+
+  /**
    * Get election results
    */
   async getResults(): Promise<Record<string, bigint>> {
@@ -314,11 +325,12 @@ export class VotingService {
     }
 
     try {
+      const allResults = await this.contract.getAllResults();
+      const candidates = await this.contract.getCandidates();
+      
       const results: Record<string, bigint> = {};
-      for (const candidate of CANDIDATES) {
-        const candidateByte = ethers.toBeHex(candidate.charCodeAt(0), 1);
-        const count = await this.contract.results(candidateByte);
-        results[candidate] = count;
+      for (let i = 0; i < candidates.length && i < allResults.length; i++) {
+        results[candidates[i]] = BigInt(allResults[i]);
       }
       return results;
     } catch (error) {

@@ -48,12 +48,14 @@ async function tallyVotes(voteFilePath) {
         // Call BBtally function
         console.log(`\n📊 Tallying vote...`);
         
-        // Convert candidate character to bytes1
-        const candidateByte = ethers.toBeHex(voteData.candidateChoice.charCodeAt(0), 1);
+        // Use candidate name directly (no conversion needed)
+        const candidateName = voteData.candidateChoice;
         
         // Verify hash locally first for debugging
         const rBytes = ethers.getBytes(voteData.r);
-        const messageToHash = ethers.concat([candidateByte, rBytes]);
+        // Use full candidate string (must match contract's abi.encodePacked)
+        const candidateBytes = ethers.toUtf8Bytes(candidateName);
+        const messageToHash = ethers.concat([candidateBytes, rBytes]);
         const localHash = ethers.keccak256(messageToHash);
         console.log(`  Local hash (c||r): ${localHash}`);
         console.log(`  Stored vote hash: ${voteData.h_v}`);
@@ -64,7 +66,7 @@ async function tallyVotes(voteFilePath) {
         
         const tx = await contract.BBtally(
             voteData.kv,
-            candidateByte,
+            candidateName,
             rBytes
         );
 
@@ -78,18 +80,18 @@ async function tallyVotes(voteFilePath) {
         // Get all results
         console.log(`\n📈 Getting election results...`);
         const results = await contract.getAllResults();
+        const candidates = await contract.getCandidates();
 
         console.log(`\n${'='.repeat(70)}`);
         console.log('Election Results:');
         console.log('='.repeat(70));
         
-        const candidates = ['A', 'B', 'C', 'D', 'E'];
         let totalVotes = 0;
         
         candidates.forEach((candidate, index) => {
             const count = results[index].toString();
             totalVotes += parseInt(count);
-            console.log(`  Candidate ${candidate}: ${count} votes`);
+            console.log(`  ${candidate}: ${count} votes`);
         });
 
         console.log(`${'='.repeat(70)}`);

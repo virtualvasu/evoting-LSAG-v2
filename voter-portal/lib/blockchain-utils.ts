@@ -126,11 +126,9 @@ export class BlockchainService {
       throw new Error('Contract not initialized');
     }
     
-    const [ring, electionId, candidatesBytes] = await this.contract.getVoterRingWithElectionInfo();
+    const [ring, electionId, candidates] = await this.contract.getVoterRingWithElectionInfo();
     
-    // Convert candidates from bytes1[] to string[]
-    const candidates = candidatesBytes.map((c: string) => String.fromCharCode(parseInt(c)));
-    
+    // Candidates are now strings, no conversion needed
     return {
       voterRing: ring.map((hash: string) => hash),
       electionId: electionId,

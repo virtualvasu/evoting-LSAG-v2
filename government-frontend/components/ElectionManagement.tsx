@@ -66,10 +66,11 @@ export default function ElectionManagement() {
       const config = await configResponse.json();
 
       const contractABI = [
-        "function startElection(string memory _electionId, bytes1[] memory _candidates)",
+        "function startElection(string memory _electionId, string[] memory _candidates)",
         "function endElection()",
         "function resetElectionData()",
-        "function getElectionStatus() view returns (string, bool, bool, bytes1[], uint256)",
+        "function getElectionStatus() view returns (string, bool, bool, string[], uint256)",
+        "function getCandidates() view returns (string[])",
         "function owner() view returns (address)"
       ];
 
@@ -93,20 +94,17 @@ export default function ElectionManagement() {
       const [electionId, isActive, isCompleted, candidates, registeredVoters] = 
         await contract.getElectionStatus();
       
-      const candidateIds = candidates.map((c: any) => String.fromCharCode(parseInt(c, 16)));
+      // Candidates are now strings, no conversion needed
+      const candidateIds = candidates.map((_: string, index: number) => 
+        String.fromCharCode(65 + index) // A, B, C...
+      );
       
-      // Load names from local storage
-      let candidateNames: Record<string, string> = {};
-      if (electionId) {
-        try {
-            const stored = localStorage.getItem(`election_${electionId}_candidates`);
-            if (stored) {
-                candidateNames = JSON.parse(stored);
-            }
-        } catch (e) {
-            console.error("Failed to load candidate names", e);
-        }
-      }
+      // Use candidate names directly as they are strings now
+      const candidateNames: Record<string, string> = {};
+      candidates.forEach((name: string, index: number) => {
+        const id = String.fromCharCode(65 + index);
+        candidateNames[id] = name;
+      });
 
       setCurrentStatus({
         electionId,
@@ -127,21 +125,19 @@ export default function ElectionManagement() {
       return;
     }
 
+    // Validate all candidates have names
+    const invalidCandidates = newElection.candidates.filter(c => !c.name.trim());
+    if (invalidCandidates.length > 0) {
+      setMessage({ type: 'error', text: 'All candidates must have names' });
+      return;
+    }
+
     setLoading(true);
     try {
-      // Store names in local storage
-      const namesMap: Record<string, string> = {};
-      newElection.candidates.forEach(c => {
-        namesMap[c.id] = c.name;
-      });
-      localStorage.setItem(`election_${newElection.electionId}_candidates`, JSON.stringify(namesMap));
+      // Use candidate names directly (no conversion needed)
+      const candidateNames = newElection.candidates.map(c => c.name.trim());
 
-      // Convert candidates to bytes1 format
-      const candidatesBytes = newElection.candidates.map(c => 
-        '0x' + c.id.charCodeAt(0).toString(16).padStart(2, '0')
-      );
-
-      const tx = await contract.startElection(newElection.electionId, candidatesBytes);
+      const tx = await contract.startElection(newElection.electionId, candidateNames);
       await tx.wait();
 
       setMessage({ type: 'success', text: 'Election started successfully!' });

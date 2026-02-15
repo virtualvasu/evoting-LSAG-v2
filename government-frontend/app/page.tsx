@@ -69,7 +69,7 @@ export default function Home() {
       <div className="max-w-7xl mx-auto px-4 py-12">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">🏛️ Government E-Voting Portal</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Government E-Voting Portal</h1>
           <p className="text-lg text-gray-600">LSAG-Based Election Management System</p>
         </div>
 
@@ -77,17 +77,17 @@ export default function Home() {
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
             {/* Contract Address */}
-            <div>
+            <div className="overflow-hidden">
               <p className="text-sm text-gray-600 mb-1">Contract Address:</p>
-              <p className="font-mono text-xs bg-gray-100 p-2 rounded border text-black">
+              <p className="font-mono text-xs bg-gray-100 p-2 rounded border text-gray-800 truncate" title={contractConfig?.contractAddress}>
                 {contractConfig?.contractAddress || 'Loading...'}
               </p>
             </div>
 
             {/* RPC URL */}
-            <div>
+            <div className="overflow-hidden">
               <p className="text-sm text-gray-600 mb-1">RPC URL:</p>
-              <p className="font-mono text-xs bg-gray-100 p-2 rounded border text-black">
+              <p className="font-mono text-xs bg-gray-100 p-2 rounded border text-gray-800 truncate" title={contractConfig?.rpcUrl}>
                 {contractConfig?.rpcUrl || 'Loading...'}
               </p>
             </div>
@@ -119,9 +119,9 @@ export default function Home() {
               ) : (
                 <button
                   onClick={connectWallet}
-                  className="w-full bg-orange-600 hover:bg-orange-700 text-black px-3 py-2 rounded text-sm font-semibold transition-colors"
+                  className="w-full bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded text-sm font-semibold transition-colors shadow-sm"
                 >
-                  🔗 Connect MetaMask
+                  Connect MetaMask
                 </button>
               )}
             </div>
@@ -136,21 +136,21 @@ export default function Home() {
                 onClick={() => setActiveTab('elections')}
                 className={`flex-1 px-6 py-4 text-center font-semibold transition duration-200 ${
                   activeTab === 'elections'
-                    ? 'bg-blue-600 text-black border-b-2 border-blue-600'
+                    ? 'bg-blue-600 text-white border-b-2 border-blue-600'
                     : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
                 }`}
               >
-                🗳️ Election Management
+                Election Management
               </button>
               <button
                 onClick={() => setActiveTab('preregistration')}
                 className={`flex-1 px-6 py-4 text-center font-semibold transition duration-200 ${
                   activeTab === 'preregistration'
-                    ? 'bg-blue-600 text-black border-b-2 border-blue-600'
+                    ? 'bg-blue-600 text-white border-b-2 border-blue-600'
                     : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
                 }`}
               >
-                📋 Voter Pre-Registration
+                Voter Pre-Registration
               </button>
             </nav>
           </div>
@@ -164,7 +164,7 @@ export default function Home() {
 
         {/* Footer Info */}
         <div className="mt-8 text-center text-sm text-gray-500">
-          <p>🔐 Secure | 🌐 Transparent | 📊 Verifiable</p>
+          <p>Secure | Transparent | Verifiable</p>
           <p className="mt-1">Government Portal for LSAG-based Electronic Voting System</p>
         </div>
       </div>

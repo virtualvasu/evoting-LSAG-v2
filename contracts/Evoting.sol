@@ -52,9 +52,9 @@ contract EVoting is Ownable {
     // Election structure - contains all election-specific data
     struct Election {
         string electionId;
-        bytes1[] candidates;
+        string[] candidates;
         RegistrationEntry[] registrationTable;
-        mapping(bytes1 => uint256) results;
+        mapping(string => uint256) results;
         bool isActive;
         bool isCompleted;
     }
@@ -71,13 +71,13 @@ contract EVoting is Ownable {
 
     // Events
     event PublicKeyStored(bytes signature, bytes publicKey);
-    event ElectionStarted(string indexed electionId, bytes1[] candidates);
+    event ElectionStarted(string indexed electionId, string[] candidates);
     event ElectionEnded(string indexed electionId);
     event ElectionReset(string indexed electionId);
     event RegistrationSuccess(string indexed electionId, uint256 indexed kv, bytes publicKey);
     event RegistrationFailed(string indexed electionId, string reason);
     event VoteCasted(string indexed electionId, uint256 indexed kv, bytes32 indexed voteHash);
-    event VoteTallied(string indexed electionId, uint256 indexed kv, bytes1 indexed candidate);
+    event VoteTallied(string indexed electionId, uint256 indexed kv, string candidate);
 
     // Constructor
     constructor(address _secp256k1) Ownable(msg.sender) {
@@ -90,15 +90,24 @@ contract EVoting is Ownable {
     /**
      * @dev Start a new election with specified candidates
      * @param _electionId Unique identifier for the election
-     * @param _candidates Array of candidate choices (e.g., ['A', 'B', 'C'])
+     * @param _candidates Array of candidate names (e.g., ['Alice', 'Bob', 'Charlie'])
      */
-    function startElection(string memory _electionId, bytes1[] memory _candidates) public onlyOwner {
+    function startElection(string memory _electionId, string[] memory _candidates) public onlyOwner {
         require(!currentElection.isActive, "An election is already active");
         require(_candidates.length > 0, "At least one candidate required");
         require(bytes(_electionId).length > 0, "Election ID cannot be empty");
+        
+        // Validate candidate names are not empty
+        for (uint256 i = 0; i < _candidates.length; i++) {
+            require(bytes(_candidates[i]).length > 0, "Candidate name cannot be empty");
+        }
 
         // Reset current election data
         delete currentElection.registrationTable;
+        
+        // Clear candidates array
+        string[] memory emptyCandidates;
+        currentElection.candidates = emptyCandidates;
         
         // Set new election configuration
         currentElection.electionId = _electionId;
@@ -154,7 +163,7 @@ contract EVoting is Ownable {
         string memory _electionId,
         bool _isActive,
         bool _isCompleted,
-        bytes1[] memory _candidates,
+        string[] memory _candidates,
         uint256 _registeredVoters
     ) {
         return (
@@ -246,7 +255,7 @@ contract EVoting is Ownable {
         returns (
             bytes32[] memory _ring,
             string memory _electionId,
-            bytes1[] memory _candidates
+            string[] memory _candidates
         ) 
     {
         return (voterRing, currentElection.electionId, currentElection.candidates);
@@ -596,10 +605,10 @@ contract EVoting is Ownable {
      * @dev BB.tally - Tally a vote for a candidate
      * Verifies vote integrity and increments candidate count
      * @param k Registration index (voter's k_v)
-     * @param c Candidate choice (A-E as bytes1)
+     * @param c Candidate name (string)
      * @param r Random number used in vote creation
      */
-    function BBtally(uint256 k, bytes1 c, bytes memory r) public {
+    function BBtally(uint256 k, string memory c, bytes memory r) public {
         require(currentElection.isActive, "No active election");
         
         // Step 1: Validate registration index
@@ -608,7 +617,7 @@ contract EVoting is Ownable {
         // Step 2: Validate candidate is in current election
         bool validCandidate = false;
         for (uint256 i = 0; i < currentElection.candidates.length; i++) {
-            if (currentElection.candidates[i] == c) {
+            if (keccak256(abi.encodePacked(currentElection.candidates[i])) == keccak256(abi.encodePacked(c))) {
                 validCandidate = true;
                 break;
             }
@@ -635,14 +644,14 @@ contract EVoting is Ownable {
 
     /**
      * @dev Get vote count for a candidate
-     * @param c Candidate choice (bytes1)
+     * @param c Candidate name (string)
      * @return Vote count for candidate
      */
-    function getVoteCount(bytes1 c) public view returns (uint256) {
+    function getVoteCount(string memory c) public view returns (uint256) {
         // Check if candidate exists in current election
         bool validCandidate = false;
         for (uint256 i = 0; i < currentElection.candidates.length; i++) {
-            if (currentElection.candidates[i] == c) {
+            if (keccak256(abi.encodePacked(currentElection.candidates[i])) == keccak256(abi.encodePacked(c))) {
                 validCandidate = true;
                 break;
             }
@@ -661,5 +670,13 @@ contract EVoting is Ownable {
             counts[i] = currentElection.results[currentElection.candidates[i]];
         }
         return counts;
+    }
+
+    /**
+     * @dev Get all candidate names for current election
+     * @return Array of candidate names
+     */
+    function getCandidates() public view returns (string[] memory) {
+        return currentElection.candidates;
     }
 }

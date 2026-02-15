@@ -15,11 +15,7 @@ export interface TallyResult {
 }
 
 export interface ElectionResults {
-  A: string;
-  B: string;
-  C: string;
-  D: string;
-  E: string;
+  [candidateName: string]: string; // Dynamic candidate names with vote counts
   total: string;
 }
 
@@ -30,9 +26,9 @@ export interface VoteVerification {
   message?: string;
 }
 
-// List of valid candidates
-export const CANDIDATES = ['A', 'B', 'C', 'D', 'E'] as const;
-export type Candidate = typeof CANDIDATES[number];
+// List of default candidates (can be overridden by current election)
+export const DEFAULT_CANDIDATES = ['Alice', 'Bob', 'Charlie', 'David', 'Eve'] as const;
+export type Candidate = string;
 
 /**
  * Tally Service for E-Voting System
@@ -140,9 +136,10 @@ export class TallyService {
       }
 
       // Calculate hash locally: keccak256(c || r)
-      const candidateByte = ethers.toBeHex(candidateChoice.charCodeAt(0), 1);
+      // Use full candidate string (must match contract's abi.encodePacked)
+      const candidateBytes = ethers.toUtf8Bytes(candidateChoice);
       const rBytes = ethers.getBytes(r);
-      const messageToHash = ethers.concat([candidateByte, rBytes]);
+      const messageToHash = ethers.concat([candidateBytes, rBytes]);
       const calculatedHash = ethers.keccak256(messageToHash);
 
       const valid = storedHash === calculatedHash;
@@ -157,6 +154,22 @@ export class TallyService {
       };
     } catch (error: any) {
       throw new Error(`Failed to verify vote: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get current election status including available candidates
+   */
+  async getElectionCandidates(): Promise<string[]> {
+    if (!this.contract) {
+      throw new Error('Contract not initialized');
+    }
+
+    try {
+      const candidates = await this.contract.getCandidates();
+      return candidates;
+    } catch (error: any) {
+      throw new Error(`Failed to get election candidates: ${error.message}`);
     }
   }
 
@@ -179,10 +192,8 @@ export class TallyService {
       const { kv, candidateChoice, r } = voteReveal;
 
       // Validate inputs
-      if (!candidateChoice || !CANDIDATES.includes(candidateChoice as Candidate)) {
-        throw new Error(
-          `Invalid candidate choice. Valid candidates: ${CANDIDATES.join(', ')}`
-        );
+      if (!candidateChoice) {
+        throw new Error('Candidate choice is required');
       }
 
       if (!r || !r.startsWith('0x')) {
@@ -193,6 +204,23 @@ export class TallyService {
       console.log('Registration index:', kv);
       console.log('Candidate:', candidateChoice);
       console.log('Random:', r.substring(0, 20) + '...');
+
+      // Fetch current election's available candidates
+      let electionCandidates: string[] = [];
+      try {
+        electionCandidates = await this.getElectionCandidates();
+        console.log('Election candidates:', electionCandidates);
+      } catch (err) {
+        console.warn('Could not fetch election candidates:', err);
+      }
+
+      // Validate candidate is in current election
+      if (electionCandidates.length > 0 && !electionCandidates.includes(candidateChoice)) {
+        throw new Error(
+          `Candidate '${candidateChoice}' is not valid for this election. ` +
+          `Valid candidates are: ${electionCandidates.join(', ')}`
+        );
+      }
 
       // Verify locally first
       const verification = await this.verifyVoteIntegrity(
@@ -209,13 +237,12 @@ export class TallyService {
         throw new Error(verification.message || 'Vote verification failed');
       }
 
-      // Convert candidate to bytes1
-      const candidateByte = ethers.toBeHex(candidateChoice.charCodeAt(0), 1);
+      // Convert candidate choice to string name (no conversion needed)
       const rBytes = ethers.getBytes(r);
 
       // Call BBtally function
       console.log('Submitting tally transaction...');
-      const tx = await this.contract.BBtally(kv, candidateByte, rBytes);
+      const tx = await this.contract.BBtally(kv, candidateChoice, rBytes);
 
       console.log('Transaction sent:', tx.hash);
       console.log('Waiting for confirmation...');
@@ -252,27 +279,57 @@ export class TallyService {
     }
 
     try {
-      const allResults = await this.contract.getAllResults();
+      // Fetch both candidates and results from contract
+      const [candidates, allResults] = await Promise.all([
+        this.contract.getCandidates(),
+        this.contract.getAllResults()
+      ]);
       
-      let total = BigInt(0);
+      console.log('Candidates from contract:', candidates);
+      console.log('Raw results from contract:', allResults);
+      console.log('Results array length:', allResults.length);
+      
+      // Check if we have valid data
+      if (!allResults || allResults.length === 0) {
+        throw new Error('No election results available. Election may not be initialized.');
+      }
+      
+      if (!candidates || candidates.length === 0) {
+        throw new Error('No candidates found. Election may not be initialized.');
+      }
+      
+      if (candidates.length !== allResults.length) {
+        console.warn(`Mismatch: ${candidates.length} candidates but ${allResults.length} results`);
+      }
+      
+      // Build results object with actual candidate names
       const results: ElectionResults = {
-        A: allResults[0].toString(),
-        B: allResults[1].toString(),
-        C: allResults[2].toString(),
-        D: allResults[3].toString(),
-        E: allResults[4].toString(),
         total: '0',
       };
-
-      // Calculate total
-      for (let i = 0; i < 5; i++) {
-        total += allResults[i];
+      
+      let total = BigInt(0);
+      
+      for (let i = 0; i < candidates.length; i++) {
+        const candidateName = candidates[i];
+        const count = BigInt(allResults[i] || 0);
+        results[candidateName] = count.toString();
+        total += count;
       }
+      
       results.total = total.toString();
 
       return results;
     } catch (error: any) {
       console.error('Error fetching results:', error);
+      
+      // Try to get more debugging info
+      try {
+        const electionStatus = await this.getElectionStatus();
+        console.log('Election status for debugging:', electionStatus);
+      } catch (debugError) {
+        console.error('Could not fetch election status for debugging:', debugError);
+      }
+      
       throw new Error(`Failed to get results: ${error.message}`);
     }
   }
@@ -324,6 +381,25 @@ export class TallyService {
       return hash;
     } catch (error: any) {
       console.error('Error fetching vote hash:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check election status and configuration
+   */
+  async getElectionStatus(): Promise<any> {
+    if (!this.contract) {
+      throw new Error('Contract not initialized');
+    }
+
+    try {
+      // Try to get current election info
+      const currentElection = await this.contract.currentElection();
+      console.log('Current Election:', currentElection);
+      return currentElection;
+    } catch (error: any) {
+      console.error('Error fetching election status:', error);
       throw error;
     }
   }

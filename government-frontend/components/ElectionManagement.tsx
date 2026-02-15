@@ -8,19 +8,29 @@ interface ElectionStatus {
   isActive: boolean;
   isCompleted: boolean;
   candidates: string[];
+  candidateNames: Record<string, string>; // Map ID to Name
   registeredVoters: number;
+}
+
+interface Candidate {
+  id: string;
+  name: string;
 }
 
 interface NewElectionData {
   electionId: string;
-  candidates: string[];
+  candidates: Candidate[];
 }
 
 export default function ElectionManagement() {
   const [currentStatus, setCurrentStatus] = useState<ElectionStatus | null>(null);
   const [newElection, setNewElection] = useState<NewElectionData>({
     electionId: '',
-    candidates: ['A', 'B', 'C'] // Default candidates
+    candidates: [
+      { id: 'A', name: '' },
+      { id: 'B', name: '' },
+      { id: 'C', name: '' }
+    ]
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -29,13 +39,23 @@ export default function ElectionManagement() {
   // Initialize contract
   useEffect(() => {
     initContract();
-    loadElectionStatus();
+    // wrapped in timeout to ensure contract is set if possible, but actually dependency array [] runs once. 
+    // We need to call loadElectionStatus after contract is set. 
+    // Effect for contract change would be better.
   }, []);
+
+  useEffect(() => {
+    if (contract) {
+        loadElectionStatus();
+    }
+  }, [contract]);
 
   const initContract = async () => {
     try {
       if (!window.ethereum) {
-        throw new Error('MetaMask not found');
+        // Silent fail or minimal log if not found immediately, handled by connect wallet usually
+        console.log('MetaMask not found'); 
+        return;
       }
 
       const provider = new ethers.BrowserProvider(window.ethereum);
@@ -46,10 +66,11 @@ export default function ElectionManagement() {
       const config = await configResponse.json();
 
       const contractABI = [
-        "function startElection(string memory _electionId, bytes1[] memory _candidates)",
+        "function startElection(string memory _electionId, string[] memory _candidates)",
         "function endElection()",
         "function resetElectionData()",
-        "function getElectionStatus() view returns (string, bool, bool, bytes1[], uint256)",
+        "function getElectionStatus() view returns (string, bool, bool, string[], uint256)",
+        "function getCandidates() view returns (string[])",
         "function owner() view returns (address)"
       ];
 
@@ -72,12 +93,25 @@ export default function ElectionManagement() {
     try {
       const [electionId, isActive, isCompleted, candidates, registeredVoters] = 
         await contract.getElectionStatus();
+      
+      // Candidates are now strings, no conversion needed
+      const candidateIds = candidates.map((_: string, index: number) => 
+        String.fromCharCode(65 + index) // A, B, C...
+      );
+      
+      // Use candidate names directly as they are strings now
+      const candidateNames: Record<string, string> = {};
+      candidates.forEach((name: string, index: number) => {
+        const id = String.fromCharCode(65 + index);
+        candidateNames[id] = name;
+      });
 
       setCurrentStatus({
         electionId,
         isActive,
         isCompleted,
-        candidates: candidates.map((c: any) => String.fromCharCode(parseInt(c, 16))),
+        candidates: candidateIds,
+        candidateNames,
         registeredVoters: Number(registeredVoters)
       });
     } catch (error) {
@@ -91,21 +125,33 @@ export default function ElectionManagement() {
       return;
     }
 
+    // Validate all candidates have names
+    const invalidCandidates = newElection.candidates.filter(c => !c.name.trim());
+    if (invalidCandidates.length > 0) {
+      setMessage({ type: 'error', text: 'All candidates must have names' });
+      return;
+    }
+
     setLoading(true);
     try {
-      // Convert candidates to bytes1 format
-      const candidatesBytes = newElection.candidates.map(c => 
-        '0x' + c.charCodeAt(0).toString(16).padStart(2, '0')
-      );
+      // Use candidate names directly (no conversion needed)
+      const candidateNames = newElection.candidates.map(c => c.name.trim());
 
-      const tx = await contract.startElection(newElection.electionId, candidatesBytes);
+      const tx = await contract.startElection(newElection.electionId, candidateNames);
       await tx.wait();
 
       setMessage({ type: 'success', text: 'Election started successfully!' });
       await loadElectionStatus();
       
       // Reset form
-      setNewElection({ electionId: '', candidates: ['A', 'B', 'C'] });
+      setNewElection({ 
+        electionId: '', 
+        candidates: [
+            { id: 'A', name: '' },
+            { id: 'B', name: '' },
+            { id: 'C', name: '' }
+        ] 
+      });
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message || 'Failed to start election' });
     }
@@ -149,7 +195,7 @@ export default function ElectionManagement() {
     if (newElection.candidates.length < 26) {
       setNewElection(prev => ({
         ...prev,
-        candidates: [...prev.candidates, nextChar]
+        candidates: [...prev.candidates, { id: nextChar, name: '' }]
       }));
     }
   };
@@ -167,13 +213,13 @@ export default function ElectionManagement() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">🗳️ Election Management</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Election Management</h2>
         <p className="text-gray-600">Setup, start, and manage elections (Owner Only)</p>
       </div>
 
       {/* Current Election Status */}
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 Current Election Status</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Election Status</h3>
         
         {currentStatus ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -187,13 +233,22 @@ export default function ElectionManagement() {
                 currentStatus.isActive ? 'text-green-600' : 
                 currentStatus.isCompleted ? 'text-blue-600' : 'text-gray-500'
               }`}>
-                {currentStatus.isActive ? '🟢 Active' : 
-                 currentStatus.isCompleted ? '🔵 Completed' : '⚪ Inactive'}
+                {currentStatus.isActive ? 'Active' : 
+                 currentStatus.isCompleted ? 'Completed' : 'Inactive'}
               </p>
             </div>
-            <div>
-              <p className="text-sm text-gray-600">Candidates:</p>
-              <p className="font-mono">[{currentStatus.candidates.join(', ')}]</p>
+            <div className="md:col-span-2">
+              <p className="text-sm text-gray-600 mb-1">Candidates:</p>
+              <div className="flex flex-wrap gap-2">
+                {currentStatus.candidates.map(c => (
+                  <span key={c} className="bg-white border rounded px-2 py-1 text-sm">
+                    <span className="font-mono font-bold mr-1">{c}</span>
+                    {currentStatus.candidateNames[c] && (
+                        <span className="text-gray-600">- {currentStatus.candidateNames[c]}</span>
+                    )}
+                  </span>
+                ))}
+              </div>
             </div>
             <div>
               <p className="text-sm text-gray-600">Registered Voters:</p>
@@ -206,16 +261,16 @@ export default function ElectionManagement() {
 
         <button
           onClick={loadElectionStatus}
-          className="mt-4 bg-gray-600 hover:bg-gray-700 text-black px-4 py-2 rounded-lg transition duration-200"
+          className="mt-4 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition duration-200"
         >
-          🔄 Refresh Status
+          Refresh Status
         </button>
       </div>
 
       {/* Setup New Election */}
       {(!currentStatus?.isActive) && (
         <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">🆕 Setup New Election</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Setup New Election</h3>
           
           <div className="space-y-4">
             {/* Election ID */}
@@ -237,14 +292,28 @@ export default function ElectionManagement() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Candidates
               </label>
-              <div className="flex flex-wrap gap-2 mb-2">
+              <div className="space-y-2 mb-4">
                 {newElection.candidates.map((candidate, index) => (
-                  <div key={index} className="flex items-center bg-blue-100 px-3 py-1 rounded-full">
-                    <span className="font-mono">{candidate}</span>
+                  <div key={index} className="flex items-center gap-2">
+                    <span className="font-mono bg-blue-100 px-3 py-2 rounded text-blue-800 font-bold min-w-[40px] text-center">
+                        {candidate.id}
+                    </span>
+                    <input 
+                        type="text"
+                        placeholder={`Candidate Name`}
+                        value={candidate.name}
+                        onChange={(e) => {
+                            const newCandidates = [...newElection.candidates];
+                            newCandidates[index].name = e.target.value;
+                            setNewElection(prev => ({ ...prev, candidates: newCandidates }));
+                        }}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
                     {newElection.candidates.length > 1 && (
                       <button
                         onClick={() => removeCandidate(index)}
-                        className="ml-2 text-red-600 hover:text-red-800"
+                        className="text-red-500 hover:text-red-700 p-2"
+                        title="Remove candidate"
                       >
                         ✕
                       </button>
@@ -255,7 +324,7 @@ export default function ElectionManagement() {
               <button
                 onClick={addCandidate}
                 disabled={newElection.candidates.length >= 26}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-black px-3 py-1 rounded text-sm transition duration-200"
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded text-sm transition duration-200 font-medium"
               >
                 + Add Candidate
               </button>
@@ -264,9 +333,9 @@ export default function ElectionManagement() {
             <button
               onClick={handleStartElection}
               disabled={loading || !newElection.electionId}
-              className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-black font-semibold py-3 px-4 rounded-lg transition duration-200"
+              className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition duration-200"
             >
-              {loading ? '⏳ Starting...' : '🚀 Start Election'}
+              {loading ? 'Starting...' : 'Start Election'}
             </button>
           </div>
         </div>
@@ -275,15 +344,15 @@ export default function ElectionManagement() {
       {/* Election Controls */}
       {currentStatus?.isActive && (
         <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">🎛️ Election Controls</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Election Controls</h3>
           
           <div className="space-y-3">
             <button
               onClick={handleEndElection}
               disabled={loading}
-              className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-black font-semibold py-3 px-4 rounded-lg transition duration-200"
+              className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition duration-200"
             >
-              {loading ? '⏳ Ending...' : '🛑 End Election'}
+              {loading ? 'Ending...' : 'End Election'}
             </button>
           </div>
         </div>
@@ -292,20 +361,20 @@ export default function ElectionManagement() {
       {/* Reset Election Data */}
       {currentStatus?.isCompleted && (
         <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">🔄 Post-Election Actions</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Post-Election Actions</h3>
           
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
             <p className="text-sm text-yellow-800">
-              ⚠️ <strong>Important:</strong> Make sure you've saved the election results off-chain before resetting!
+              <strong>Important:</strong> Make sure you've saved the election results off-chain before resetting!
             </p>
           </div>
           
           <button
             onClick={handleResetElectionData}
             disabled={loading}
-            className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-black font-semibold py-3 px-4 rounded-lg transition duration-200"
+            className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition duration-200"
           >
-            {loading ? '⏳ Resetting...' : '🔄 Reset Election Data'}
+            {loading ? 'Resetting...' : 'Reset Election Data'}
           </button>
         </div>
       )}
@@ -318,7 +387,7 @@ export default function ElectionManagement() {
             : 'bg-red-50 border-red-200 text-red-800'
         }`}>
           <p className="font-semibold">
-            {message.type === 'success' ? '✅ Success' : '❌ Error'}
+            {message.type === 'success' ? 'Success' : 'Error'}
           </p>
           <p>{message.text}</p>
         </div>
@@ -326,7 +395,7 @@ export default function ElectionManagement() {
 
       {/* Instructions */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="font-semibold text-blue-900 mb-2">📌 Workflow:</h4>
+        <h4 className="font-semibold text-blue-900 mb-2">Workflow:</h4>
         <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
           <li>Setup new election with ID and candidates</li>
           <li>Start election - voters can now register and vote</li>
@@ -335,7 +404,7 @@ export default function ElectionManagement() {
           <li>Reset election data to prepare for next election</li>
         </ol>
         <p className="text-xs text-blue-600 mt-3">
-          💡 The voter ring persists across elections - no need to re-register voters!
+          The voter ring persists across elections - no need to re-register voters!
         </p>
       </div>
     </div>

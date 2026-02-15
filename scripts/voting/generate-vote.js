@@ -16,8 +16,8 @@ const CryptoUtils = require('../utils/crypto-utils');
  * 5. Return sigma_v_prime, h_v, k_v
  */
 
-// List of candidates
-const CANDIDATES = ['A', 'B', 'C', 'D', 'E'];
+// List of candidates (can be updated based on current election)
+const CANDIDATES = ['Alice', 'Bob', 'Charlie', 'David', 'Eve'];
 
 async function generateVote(newPrivateKey, candidateChoice, kv) {
     try {
@@ -29,17 +29,19 @@ async function generateVote(newPrivateKey, candidateChoice, kv) {
             throw new Error('Missing required parameters: newPrivateKey, candidateChoice, kv');
         }
 
-        if (!CANDIDATES.includes(candidateChoice.toUpperCase())) {
+        if (!CANDIDATES.map(c => c.toLowerCase()).includes(candidateChoice.toLowerCase())) {
             throw new Error(`Invalid candidate choice. Valid candidates: ${CANDIDATES.join(', ')}`);
         }
 
         console.log(`\n✓ Input parameters validated`);
-        console.log(`  Candidate choice: ${candidateChoice.toUpperCase()}`);
+        console.log(`  Candidate choice: ${candidateChoice}`);
         console.log(`  Registration index (k_v): ${kv}`);
         console.log(`  New private key: ${newPrivateKey.substring(0, 20)}...`);
 
-        // Step 1: Candidate choice
-        const c = candidateChoice.toUpperCase();
+        // Step 1: Candidate choice (normalize to proper case)
+        const c = CANDIDATES.find(candidate => 
+            candidate.toLowerCase() === candidateChoice.toLowerCase()
+        ) || candidateChoice;
         console.log(`\n✓ Candidate selected: ${c}`);
 
         // Step 2: Generate random number r (32 bytes)
@@ -49,9 +51,10 @@ async function generateVote(newPrivateKey, candidateChoice, kv) {
         console.log(`  r: ${rHex.substring(0, 20)}...`);
 
         // Step 3: Calculate h_v = keccak256(c || r)
-        // Convert candidate to bytes1
-        const cByte = ethers.toBeHex(c.charCodeAt(0), 1);
-        const messageToHash = ethers.concat([cByte, rHex]);
+        // Use full candidate string (must match contract's abi.encodePacked)
+        const cBytes = ethers.toUtf8Bytes(c);
+        const rBytes = ethers.getBytes(rHex);
+        const messageToHash = ethers.concat([cBytes, rBytes]);
         const h_vHex = ethers.keccak256(messageToHash);
         console.log(`\n✓ Generated hash h_v = keccak256(c || r)`);
         console.log(`  h_v: ${h_vHex}`);

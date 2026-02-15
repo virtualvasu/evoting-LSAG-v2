@@ -26,9 +26,9 @@ export interface VoteCastResult {
   error?: string;
 }
 
-// List of valid candidates
-export const CANDIDATES = ['A', 'B', 'C', 'D', 'E'] as const;
-export type Candidate = typeof CANDIDATES[number];
+// List of default candidates (can be updated based on current election)
+export const DEFAULT_CANDIDATES = ['Alice', 'Bob', 'Charlie', 'David', 'Eve'] as const;
+export type Candidate = string;
 
 /**
  * Voting Service for E-Voting System
@@ -130,18 +130,30 @@ export class VotingService {
         throw new Error('Missing required parameters');
       }
 
-      if (!CANDIDATES.includes(candidateChoice)) {
-        throw new Error(
-          `Invalid candidate choice. Valid candidates: ${CANDIDATES.join(', ')}`
-        );
+      // Validate private key format
+      let cleanPrivateKey = newPrivateKey.startsWith('0x') 
+        ? newPrivateKey.slice(2) 
+        : newPrivateKey;
+      
+      // Pad with leading zero if needed (common case for keys that start with 0)
+      if (cleanPrivateKey.length === 63 && /^[0-9a-fA-F]{63}$/.test(cleanPrivateKey)) {
+        cleanPrivateKey = '0' + cleanPrivateKey;
+      }
+      
+      if (!/^[0-9a-fA-F]{64}$/.test(cleanPrivateKey)) {
+        throw new Error(`Invalid private key format. Must be 64 hexadecimal characters. Current length: ${cleanPrivateKey.length}`);
+      }
+
+      if (cleanPrivateKey === '0'.repeat(64)) {
+        throw new Error('Invalid private key. Cannot be all zeros.');
       }
 
       console.log('Generating vote...');
       console.log('Candidate:', candidateChoice);
       console.log('Registration index (kv):', kv);
 
-      // Step 1: Candidate choice
-      const c = candidateChoice.toUpperCase();
+      // Step 1: Candidate choice (keep original case)
+      const c = candidateChoice;
 
       // Step 2: Generate random number r (32 bytes)
       const randomBytes = new Uint8Array(32);
@@ -155,17 +167,16 @@ export class VotingService {
       console.log('Generated random r');
 
       // Step 3: Calculate h_v = keccak256(c || r)
-      // Convert candidate to bytes1
-      const cByte = ethers.toBeHex(c.charCodeAt(0), 1);
-      const messageToHash = ethers.concat([cByte, rHex]);
+      // Use full candidate string (must match contract's abi.encodePacked)
+      const cBytes = ethers.toUtf8Bytes(c);
+      const rBytes = ethers.getBytes(rHex);
+      const messageToHash = ethers.concat([cBytes, rBytes]);
       const h_vHex = ethers.keccak256(messageToHash);
 
       console.log('Generated hash h_v:', h_vHex);
 
       // Step 4: Sign h_v with new private key using PKS (Ethereum signing)
-      const privateKeyHex = newPrivateKey.startsWith('0x')
-        ? newPrivateKey
-        : '0x' + newPrivateKey;
+      const privateKeyHex = '0x' + cleanPrivateKey;
 
       const wallet = new ethers.Wallet(privateKeyHex);
 
@@ -180,8 +191,8 @@ export class VotingService {
       const sig = ethers.Signature.from(signature);
 
       const sigma_v_prime = {
-        r: sig.r,
-        s: sig.s,
+        r: ethers.zeroPadValue(sig.r, 32),
+        s: ethers.zeroPadValue(sig.s, 32),
         v: sig.v,
       };
 
@@ -282,12 +293,26 @@ export class VotingService {
     }
 
     try {
-      const entry = await this.contract.registrationTable(kv);
-      // Check if voteHash is not zero
-      return entry.voteHash !== ethers.ZeroHash;
+      return await this.contract.hasVoted(kv);
     } catch (error) {
       console.error('Error checking vote status:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Get current election candidates
+   */
+  async getElectionCandidates(): Promise<string[]> {
+    if (!this.contract) {
+      throw new Error('Contract not initialized');
+    }
+
+    try {
+      return await this.contract.getCandidates();
+    } catch (error: any) {
+      console.error('Error fetching election candidates:', error);
+      throw new Error(`Failed to get election candidates: ${error.message}`);
     }
   }
 
@@ -300,11 +325,12 @@ export class VotingService {
     }
 
     try {
+      const allResults = await this.contract.getAllResults();
+      const candidates = await this.contract.getCandidates();
+      
       const results: Record<string, bigint> = {};
-      for (const candidate of CANDIDATES) {
-        const candidateByte = ethers.toBeHex(candidate.charCodeAt(0), 1);
-        const count = await this.contract.results(candidateByte);
-        results[candidate] = count;
+      for (let i = 0; i < candidates.length && i < allResults.length; i++) {
+        results[candidates[i]] = BigInt(allResults[i]);
       }
       return results;
     } catch (error) {

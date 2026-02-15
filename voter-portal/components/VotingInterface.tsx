@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { VotingService, CANDIDATES, type Candidate, type VoteData } from '@/lib/voting-service';
+import { VotingService, DEFAULT_CANDIDATES, type Candidate, type VoteData } from '@/lib/voting-service';
 
 export default function VotingInterface() {
   const [contractAddress, setContractAddress] = useState('');
@@ -13,8 +13,11 @@ export default function VotingInterface() {
 
   // Vote generation inputs
   const [newPrivateKey, setNewPrivateKey] = useState('');
-  const [candidateChoice, setCandidateChoice] = useState<Candidate>('A');
+  const [candidateChoice, setCandidateChoice] = useState<Candidate>('Alice');
   const [kv, setKv] = useState<string>('');
+
+  // Available candidates for current election
+  const [availableCandidates, setAvailableCandidates] = useState<string[]>(DEFAULT_CANDIDATES);
 
   // Vote data
   const [voteData, setVoteData] = useState<VoteData | null>(null);
@@ -69,6 +72,19 @@ export default function VotingInterface() {
       setWalletAddress(address);
       setConnected(true);
       setSuccess(`Connected: ${address}`);
+
+      // Fetch available candidates for the current election
+      try {
+        // Get candidates from contract if election is active
+        const candidatesFromContract = await votingService.getElectionCandidates();
+        if (candidatesFromContract && candidatesFromContract.length > 0) {
+          setAvailableCandidates(candidatesFromContract);
+          setCandidateChoice(candidatesFromContract[0]);
+        }
+      } catch (err: any) {
+        console.warn('Could not fetch election candidates, using defaults:', err);
+        // Keep default candidates if fetch fails
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -110,6 +126,13 @@ export default function VotingInterface() {
 
     if (!newPrivateKey || !candidateChoice || !kv) {
       setError('Please fill in all fields');
+      return;
+    }
+
+    // Validate private key format
+    const cleanKey = newPrivateKey.startsWith('0x') ? newPrivateKey.slice(2) : newPrivateKey;
+    if (!/^[0-9a-fA-F]{64}$/.test(cleanKey)) {
+      setError('Invalid private key format. Must be 64 hexadecimal characters.');
       return;
     }
 
@@ -291,13 +314,13 @@ export default function VotingInterface() {
               <input
                 type="password"
                 value={newPrivateKey}
-                onChange={(e) => setNewPrivateKey(e.target.value)}
-                placeholder="0x..."
+                onChange={(e) => setNewPrivateKey(e.target.value.trim())}
+                placeholder="0x... or 64 hex characters"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
                 disabled={loading}
               />
               <p className="text-xs text-gray-500 mt-1">
-                The new private key you generated during registration
+                The new private key you generated during registration (64 hexadecimal characters)
               </p>
             </div>
 
@@ -307,7 +330,7 @@ export default function VotingInterface() {
                 Candidate Choice
               </label>
               <div className="flex gap-2">
-                {CANDIDATES.map((candidate) => (
+                {availableCandidates.map((candidate) => (
                   <button
                     key={candidate}
                     onClick={() => setCandidateChoice(candidate)}
@@ -436,7 +459,7 @@ export default function VotingInterface() {
             <li>Enter your registration index (k_v) from LSAG registration</li>
             <li>Check if you have already voted</li>
             <li>Enter your new private key (P_rv&apos;) from registration</li>
-            <li>Select your candidate choice (A, B, C, D, or E)</li>
+            <li>Select your candidate choice from the available candidates</li>
             <li>Click &quot;Generate Vote&quot; to create your encrypted vote</li>
             <li>Review the vote summary carefully</li>
             <li>Click &quot;Cast Vote on Blockchain&quot; to submit your vote</li>

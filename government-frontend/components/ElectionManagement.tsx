@@ -10,6 +10,8 @@ interface ElectionStatus {
   candidates: string[];
   candidateNames: Record<string, string>; // Map ID to Name
   registeredVoters: number;
+  currentPhase: number;
+  phaseString: string;
 }
 
 interface Candidate {
@@ -69,8 +71,16 @@ export default function ElectionManagement() {
         "function startElection(string memory _electionId, string[] memory _candidates)",
         "function endElection()",
         "function resetElectionData()",
-        "function getElectionStatus() view returns (string, bool, bool, string[], uint256)",
+        "function getElectionStatus() view returns (string, bool, bool, string[], uint256, uint8, string)",
         "function getCandidates() view returns (string[])",
+        "function startRegistrationPhase()",
+        "function stopRegistrationPhase()",
+        "function startVotingPhase()",
+        "function stopVotingPhase()",
+        "function startTallyingPhase()",
+        "function stopTallyingPhase()",
+        "function getCurrentPhase() view returns (uint8)",
+        "function getCurrentPhaseString() view returns (string)",
         "function owner() view returns (address)"
       ];
 
@@ -91,7 +101,7 @@ export default function ElectionManagement() {
     if (!contract) return;
 
     try {
-      const [electionId, isActive, isCompleted, candidates, registeredVoters] = 
+      const [electionId, isActive, isCompleted, candidates, registeredVoters, currentPhase, phaseString] = 
         await contract.getElectionStatus();
       
       // Candidates are now strings, no conversion needed
@@ -112,7 +122,9 @@ export default function ElectionManagement() {
         isCompleted,
         candidates: candidateIds,
         candidateNames,
-        registeredVoters: Number(registeredVoters)
+        registeredVoters: Number(registeredVoters),
+        currentPhase: Number(currentPhase),
+        phaseString: phaseString
       });
     } catch (error) {
       console.error('Failed to load election status:', error);
@@ -190,6 +202,91 @@ export default function ElectionManagement() {
     setLoading(false);
   };
 
+  // Phase Control Handlers
+  const handleStartRegistrationPhase = async () => {
+    if (!contract) return;
+    setLoading(true);
+    try {
+      const tx = await contract.startRegistrationPhase();
+      await tx.wait();
+      setMessage({ type: 'success', text: 'Registration phase started!' });
+      await loadElectionStatus();
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message || 'Failed to start registration phase' });
+    }
+    setLoading(false);
+  };
+
+  const handleStopRegistrationPhase = async () => {
+    if (!contract) return;
+    setLoading(true);
+    try {
+      const tx = await contract.stopRegistrationPhase();
+      await tx.wait();
+      setMessage({ type: 'success', text: 'Registration phase stopped!' });
+      await loadElectionStatus();
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message || 'Failed to stop registration phase' });
+    }
+    setLoading(false);
+  };
+
+  const handleStartVotingPhase = async () => {
+    if (!contract) return;
+    setLoading(true);
+    try {
+      const tx = await contract.startVotingPhase();
+      await tx.wait();
+      setMessage({ type: 'success', text: 'Voting phase started!' });
+      await loadElectionStatus();
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message || 'Failed to start voting phase' });
+    }
+    setLoading(false);
+  };
+
+  const handleStopVotingPhase = async () => {
+    if (!contract) return;
+    setLoading(true);
+    try {
+      const tx = await contract.stopVotingPhase();
+      await tx.wait();
+      setMessage({ type: 'success', text: 'Voting phase stopped!' });
+      await loadElectionStatus();
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message || 'Failed to stop voting phase' });
+    }
+    setLoading(false);
+  };
+
+  const handleStartTallyingPhase = async () => {
+    if (!contract) return;
+    setLoading(true);
+    try {
+      const tx = await contract.startTallyingPhase();
+      await tx.wait();
+      setMessage({ type: 'success', text: 'Tallying phase started!' });
+      await loadElectionStatus();
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message || 'Failed to start tallying phase' });
+    }
+    setLoading(false);
+  };
+
+  const handleStopTallyingPhase = async () => {
+    if (!contract) return;
+    setLoading(true);
+    try {
+      const tx = await contract.stopTallyingPhase();
+      await tx.wait();
+      setMessage({ type: 'success', text: 'Tallying phase stopped!' });
+      await loadElectionStatus();
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message || 'Failed to stop tallying phase' });
+    }
+    setLoading(false);
+  };
+
   const addCandidate = () => {
     const nextChar = String.fromCharCode(65 + newElection.candidates.length); // A, B, C, D...
     if (newElection.candidates.length < 26) {
@@ -237,6 +334,25 @@ export default function ElectionManagement() {
                  currentStatus.isCompleted ? 'Completed' : 'Inactive'}
               </p>
             </div>
+            <div>
+              <p className="text-sm text-gray-600">Current Phase:</p>
+              <p className="font-semibold text-lg">
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                  currentStatus.phaseString === 'SETUP' ? 'bg-gray-100 text-gray-800' :
+                  currentStatus.phaseString === 'REGISTRATION' ? 'bg-blue-100 text-blue-800' :
+                  currentStatus.phaseString === 'VOTING' ? 'bg-green-100 text-green-800' :
+                  currentStatus.phaseString === 'TALLYING' ? 'bg-purple-100 text-purple-800' :
+                  currentStatus.phaseString === 'ENDED' ? 'bg-red-100 text-red-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {currentStatus.phaseString}
+                </span>
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Registered Voters:</p>
+              <p className="font-semibold text-lg">{currentStatus.registeredVoters}</p>
+            </div>
             <div className="md:col-span-2">
               <p className="text-sm text-gray-600 mb-1">Candidates:</p>
               <div className="flex flex-wrap gap-2">
@@ -250,10 +366,6 @@ export default function ElectionManagement() {
                 ))}
               </div>
             </div>
-            <div>
-              <p className="text-sm text-gray-600">Registered Voters:</p>
-              <p className="font-semibold text-lg">{currentStatus.registeredVoters}</p>
-            </div>
           </div>
         ) : (
           <p className="text-gray-500">Loading...</p>
@@ -266,6 +378,128 @@ export default function ElectionManagement() {
           Refresh Status
         </button>
       </div>
+
+      {/* Phase Control Panel */}
+      {currentStatus?.isActive && (
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Phase Control</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Registration Phase Controls */}
+            <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
+              <h4 className="font-semibold text-blue-900 mb-3">Registration Phase</h4>
+              <div className="space-y-2">
+                <button
+                  onClick={handleStartRegistrationPhase}
+                  disabled={loading || currentStatus.phaseString === 'REGISTRATION'}
+                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition duration-200 text-sm"
+                >
+                  {currentStatus.phaseString === 'REGISTRATION' ? '✓ Active' : 'Start Registration'}
+                </button>
+                <button
+                  onClick={handleStopRegistrationPhase}
+                  disabled={loading || currentStatus.phaseString !== 'REGISTRATION'}
+                  className="w-full bg-blue-800 hover:bg-blue-900 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition duration-200 text-sm"
+                >
+                  Stop Registration
+                </button>
+              </div>
+            </div>
+
+            {/* Voting Phase Controls */}
+            <div className="border border-green-200 rounded-lg p-4 bg-green-50">
+              <h4 className="font-semibold text-green-900 mb-3">Voting Phase</h4>
+              <div className="space-y-2">
+                <button
+                  onClick={handleStartVotingPhase}
+                  disabled={
+                    loading || 
+                    currentStatus.phaseString === 'VOTING' || 
+                    currentStatus.phaseString === 'REGISTRATION' || 
+                    currentStatus.registeredVoters === 0
+                  }
+                  className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition duration-200 text-sm"
+                  title={currentStatus.registeredVoters === 0 ? 'Need registered voters first' : currentStatus.phaseString === 'REGISTRATION' ? 'Stop registration first' : ''}
+                >
+                  {currentStatus.phaseString === 'VOTING' ? '✓ Active' : 'Start Voting'}
+                </button>
+                <button
+                  onClick={handleStopVotingPhase}
+                  disabled={loading || currentStatus.phaseString !== 'VOTING'}
+                  className="w-full bg-green-800 hover:bg-green-900 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition duration-200 text-sm"
+                >
+                  Stop Voting
+                </button>
+              </div>
+              {currentStatus.phaseString === 'REGISTRATION' && (
+                <p className="text-xs text-orange-700 mt-2">⚠ Stop registration before starting voting</p>
+              )}
+              {currentStatus.registeredVoters === 0 && currentStatus.phaseString !== 'REGISTRATION' && (
+                <p className="text-xs text-red-700 mt-2">⚠ No voters registered yet</p>
+              )}
+            </div>
+
+            {/* Tallying Phase Controls */}
+            <div className="border border-purple-200 rounded-lg p-4 bg-purple-50 md:col-span-2">
+              <h4 className="font-semibold text-purple-900 mb-3">Tallying Phase</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <button
+                  onClick={handleStartTallyingPhase}
+                  disabled={
+                    loading || 
+                    currentStatus.phaseString === 'TALLYING' || 
+                    currentStatus.phaseString === 'VOTING' || 
+                    currentStatus.phaseString === 'REGISTRATION'
+                  }
+                  className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition duration-200 text-sm"
+                  title={currentStatus.phaseString === 'VOTING' ? 'Stop voting first' : currentStatus.phaseString === 'REGISTRATION' ? 'Complete registration and voting first' : ''}
+                >
+                  {currentStatus.phaseString === 'TALLYING' ? '✓ Active' : 'Start Tallying'}
+                </button>
+                <button
+                  onClick={handleStopTallyingPhase}
+                  disabled={loading || currentStatus.phaseString !== 'TALLYING'}
+                  className="bg-purple-800 hover:bg-purple-900 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition duration-200 text-sm"
+                >
+                  Stop Tallying
+                </button>
+              </div>
+              {(currentStatus.phaseString === 'VOTING' || currentStatus.phaseString === 'REGISTRATION') && (
+                <p className="text-xs text-orange-700 mt-2">⚠ Complete and stop {currentStatus.phaseString.toLowerCase()} before tallying</p>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-3">
+            <p className="text-xs text-gray-600">
+              <strong>Phase Flow:</strong> SETUP → REGISTRATION (stop) → VOTING (stop) → TALLYING (stop) → END
+            </p>
+            <p className="text-xs text-gray-600 mt-1">
+              <strong>⚠ Important:</strong> You must stop each phase before starting the next one.
+            </p>
+            <p className="text-xs text-gray-600 mt-1">
+              Registration must be stopped before voting can start. Voting must be stopped before tallying can start.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Election Controls */}
+      {currentStatus?.isActive && (
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Election Controls</h3>
+          
+          <div className="space-y-3">
+            <button
+              onClick={handleEndElection}
+              disabled={loading}
+              className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition duration-200"
+            >
+              {loading ? 'Ending...' : 'End Election'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Setup New Election */}
       {(!currentStatus?.isActive) && (
@@ -341,23 +575,6 @@ export default function ElectionManagement() {
         </div>
       )}
 
-      {/* Election Controls */}
-      {currentStatus?.isActive && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Election Controls</h3>
-          
-          <div className="space-y-3">
-            <button
-              onClick={handleEndElection}
-              disabled={loading}
-              className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition duration-200"
-            >
-              {loading ? 'Ending...' : 'End Election'}
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Reset Election Data */}
       {currentStatus?.isCompleted && (
         <div className="bg-white border border-gray-200 rounded-lg p-6">
@@ -395,17 +612,19 @@ export default function ElectionManagement() {
 
       {/* Instructions */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="font-semibold text-blue-900 mb-2">Workflow:</h4>
+        <h4 className="font-semibold text-blue-900 mb-2">Sequential Workflow:</h4>
         <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
-          <li>Setup new election with ID and candidates</li>
-          <li>Start election - voters can now register and vote</li>
-          <li>End election when voting period is over</li>
-          <li>Store results off-chain</li>
-          <li>Reset election data to prepare for next election</li>
+          <li><strong>Setup Election:</strong> Create election with ID and candidates (Phase: SETUP)</li>
+          <li><strong>Start Registration:</strong> Open voter registration phase</li>
+          <li><strong>Stop Registration:</strong> Close registration when complete (must stop before voting)</li>
+          <li><strong>Start Voting:</strong> Open voting phase (only after registration is stopped)</li>
+          <li><strong>Stop Voting:</strong> Close voting when period ends (must stop before tallying)</li>
+          <li><strong>Start Tallying:</strong> Begin vote counting (only after voting is stopped)</li>
+          <li><strong>Stop Tallying:</strong> Complete tallying when all votes counted</li>
+          <li><strong>End Election:</strong> Finalize election (Phase: ENDED)</li>
+          <li><strong>Reset:</strong> Save results off-chain, then reset for next election</li>
         </ol>
-        <p className="text-xs text-blue-600 mt-3">
-          The voter ring persists across elections - no need to re-register voters!
-        </p>
+        <p className="text-xs text-blue-600 mt-3\">\n          <strong>⚠ Phase Dependencies:</strong> Each phase must be properly stopped before advancing to the next phase. This ensures data integrity and proper election flow.\n        </p>\n        <p className="text-xs text-blue-600 mt-1\">\n          The voter ring persists across elections - no need to re-register voters!\n        </p>
       </div>
     </div>
   );

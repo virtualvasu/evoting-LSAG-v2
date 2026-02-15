@@ -19,6 +19,15 @@ contract EVoting is Ownable {
     
     ISecp256k1 public secp256k1;
 
+    // Election Phase enum
+    enum ElectionPhase {
+        SETUP,           // 0 - Initial state, election created but not started
+        REGISTRATION,    // 1 - Registration phase active
+        VOTING,          // 2 - Voting phase active
+        TALLYING,        // 3 - Tallying phase active
+        ENDED            // 4 - Election ended
+    }
+
     // Structure to store voter's public key
     struct VoterPublicKey {
         bytes publicKey;
@@ -57,6 +66,7 @@ contract EVoting is Ownable {
         mapping(string => uint256) results;
         bool isActive;
         bool isCompleted;
+        ElectionPhase currentPhase;  // Current phase of the election
     }
 
     // Mappings
@@ -74,10 +84,27 @@ contract EVoting is Ownable {
     event ElectionStarted(string indexed electionId, string[] candidates);
     event ElectionEnded(string indexed electionId);
     event ElectionReset(string indexed electionId);
+    event RegistrationPhaseStarted(string indexed electionId);
+    event RegistrationPhaseStopped(string indexed electionId);
+    event VotingPhaseStarted(string indexed electionId);
+    event VotingPhaseStopped(string indexed electionId);
+    event TallyingPhaseStarted(string indexed electionId);
+    event TallyingPhaseStopped(string indexed electionId);
     event RegistrationSuccess(string indexed electionId, uint256 indexed kv, bytes publicKey);
     event RegistrationFailed(string indexed electionId, string reason);
     event VoteCasted(string indexed electionId, uint256 indexed kv, bytes32 indexed voteHash);
     event VoteTallied(string indexed electionId, uint256 indexed kv, string candidate);
+
+    // Modifiers for phase validation
+    modifier onlyInPhase(ElectionPhase _phase) {
+        require(currentElection.currentPhase == _phase, "Operation not allowed in current phase");
+        _;
+    }
+
+    modifier whenElectionActive() {
+        require(currentElection.isActive, "No active election");
+        _;
+    }
 
     // Constructor
     constructor(address _secp256k1) Ownable(msg.sender) {
@@ -114,6 +141,7 @@ contract EVoting is Ownable {
         currentElection.candidates = _candidates;
         currentElection.isActive = true;
         currentElection.isCompleted = false;
+        currentElection.currentPhase = ElectionPhase.SETUP;
 
         // Reset results for all candidates
         for (uint256 i = 0; i < _candidates.length; i++) {
@@ -131,6 +159,7 @@ contract EVoting is Ownable {
         
         currentElection.isActive = false;
         currentElection.isCompleted = true;
+        currentElection.currentPhase = ElectionPhase.ENDED;
 
         emit ElectionEnded(currentElection.electionId);
     }
@@ -156,6 +185,96 @@ contract EVoting is Ownable {
         emit ElectionReset(electionId);
     }
 
+    // -------- ELECTION PHASE CONTROL -------- //
+
+    /**
+     * @dev Start registration phase
+     * Allows voters to register for voting
+     */
+    function startRegistrationPhase() public onlyOwner whenElectionActive {
+        require(currentElection.currentPhase == ElectionPhase.SETUP, "Can only start registration from SETUP phase");
+        currentElection.currentPhase = ElectionPhase.REGISTRATION;
+        emit RegistrationPhaseStarted(currentElection.electionId);
+    }
+
+    /**
+     * @dev Stop registration phase
+     * Transitions to SETUP phase, preventing further registrations
+     */
+    function stopRegistrationPhase() public onlyOwner whenElectionActive onlyInPhase(ElectionPhase.REGISTRATION) {
+        currentElection.currentPhase = ElectionPhase.SETUP;
+        emit RegistrationPhaseStopped(currentElection.electionId);
+    }
+
+    /**
+     * @dev Start voting phase
+     * Allows registered voters to cast their votes
+     */
+    function startVotingPhase() public onlyOwner whenElectionActive {
+        require(
+            currentElection.currentPhase == ElectionPhase.SETUP || 
+            currentElection.currentPhase == ElectionPhase.REGISTRATION,
+            "Can only start voting from SETUP or REGISTRATION phase"
+        );
+        require(currentElection.registrationTable.length > 0, "At least one voter must be registered");
+        currentElection.currentPhase = ElectionPhase.VOTING;
+        emit VotingPhaseStarted(currentElection.electionId);
+    }
+
+    /**
+     * @dev Stop voting phase
+     * Transitions to SETUP phase, preventing further vote casting
+     */
+    function stopVotingPhase() public onlyOwner whenElectionActive onlyInPhase(ElectionPhase.VOTING) {
+        currentElection.currentPhase = ElectionPhase.SETUP;
+        emit VotingPhaseStopped(currentElection.electionId);
+    }
+
+    /**
+     * @dev Start tallying phase
+     * Allows vote tallying and result calculation
+     */
+    function startTallyingPhase() public onlyOwner whenElectionActive {
+        require(
+            currentElection.currentPhase == ElectionPhase.SETUP || 
+            currentElection.currentPhase == ElectionPhase.VOTING,
+            "Can only start tallying from SETUP or VOTING phase"
+        );
+        currentElection.currentPhase = ElectionPhase.TALLYING;
+        emit TallyingPhaseStarted(currentElection.electionId);
+    }
+
+    /**
+     * @dev Stop tallying phase
+     * Transitions to SETUP phase, preventing further tallying
+     */
+    function stopTallyingPhase() public onlyOwner whenElectionActive onlyInPhase(ElectionPhase.TALLYING) {
+        currentElection.currentPhase = ElectionPhase.SETUP;
+        emit TallyingPhaseStopped(currentElection.electionId);
+    }
+
+    /**
+     * @dev Get current election phase
+     * @return Current phase as ElectionPhase enum
+     */
+    function getCurrentPhase() public view returns (ElectionPhase) {
+        return currentElection.currentPhase;
+    }
+
+    /**
+     * @dev Get current election phase as string
+     * @return Phase name as string
+     */
+    function getCurrentPhaseString() public view returns (string memory) {
+        ElectionPhase phase = currentElection.currentPhase;
+        if (phase == ElectionPhase.SETUP) return "SETUP";
+        if (phase == ElectionPhase.REGISTRATION) return "REGISTRATION";
+        if (phase == ElectionPhase.VOTING) return "VOTING";
+        if (phase == ElectionPhase.TALLYING) return "TALLYING";
+        if (phase == ElectionPhase.ENDED) return "ENDED";
+        return "UNKNOWN";
+    }
+
     /**
      * @dev Get current election status
      */
@@ -164,14 +283,18 @@ contract EVoting is Ownable {
         bool _isActive,
         bool _isCompleted,
         string[] memory _candidates,
-        uint256 _registeredVoters
+        uint256 _registeredVoters,
+        ElectionPhase _currentPhase,
+        string memory _phaseString
     ) {
         return (
             currentElection.electionId,
             currentElection.isActive,
             currentElection.isCompleted,
             currentElection.candidates,
-            currentElection.registrationTable.length
+            currentElection.registrationTable.length,
+            currentElection.currentPhase,
+            getCurrentPhaseString()
         );
     }
 
@@ -448,7 +571,7 @@ contract EVoting is Ownable {
         uint256 electionIdHash,
         LSAGSignature memory lsagSig,
         bytes memory voterPubKey
-    ) public returns (uint256 kv) {
+    ) public onlyInPhase(ElectionPhase.REGISTRATION) returns (uint256 kv) {
         require(currentElection.isActive, "No active election");
         
         // Step 1: LSAG.ver(L, Pu, σv) = 1
@@ -496,7 +619,7 @@ contract EVoting is Ownable {
         bytes32 r,
         bytes32 s,
         uint8 v
-    ) public returns (bool) {
+    ) public onlyInPhase(ElectionPhase.VOTING) returns (bool) {
         require(currentElection.isActive, "No active election");
         
         // Step 1: Validate registration index
@@ -608,7 +731,7 @@ contract EVoting is Ownable {
      * @param c Candidate name (string)
      * @param r Random number used in vote creation
      */
-    function BBtally(uint256 k, string memory c, bytes memory r) public {
+    function BBtally(uint256 k, string memory c, bytes memory r) public onlyInPhase(ElectionPhase.TALLYING) {
         require(currentElection.isActive, "No active election");
         
         // Step 1: Validate registration index

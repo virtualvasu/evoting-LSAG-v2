@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { TallyService, DEFAULT_CANDIDATES, type Candidate, type VoteReveal, type ElectionResults } from '@/lib/tally-service';
+import { BlockchainService } from '@/lib/blockchain-utils';
 
 export default function TallyInterface() {
   const [contractAddress, setContractAddress] = useState('');
@@ -37,6 +38,17 @@ export default function TallyInterface() {
   // Service instance
   const [tallyService, setTallyService] = useState<TallyService | null>(null);
 
+  // Phase checking state
+  const [electionStatus, setElectionStatus] = useState<{
+    electionId: string;
+    isActive: boolean;
+    phaseString: string;
+    currentPhase: number;
+    registeredVoters: string;
+  } | null>(null);
+  const [isCheckingPhase, setIsCheckingPhase] = useState(false);
+  const [rpcUrl, setRpcUrl] = useState('http://10.10.0.61:8550');
+
   // Load contract config on mount
   useEffect(() => {
     loadContractConfig();
@@ -57,14 +69,51 @@ export default function TallyInterface() {
       
       const address = data.address || data.contractAddress;
       setContractAddress(address);
+      setRpcUrl(data.rpcUrl || 'http://10.10.0.61:8550');
 
       // Initialize service
       const service = new TallyService(address);
       await service.loadABI();
       setTallyService(service);
+      
+      // Check election phase
+      await checkElectionPhase(address, data.rpcUrl || 'http://10.10.0.61:8550');
     } catch (err: any) {
       setError(err.message);
       console.error('Failed to load contract config:', err);
+    }
+  };
+
+  const checkElectionPhase = async (address?: string, rpc?: string) => {
+    setIsCheckingPhase(true);
+    try {
+      const blockchain = new BlockchainService(
+        address || contractAddress,
+        rpc || rpcUrl
+      );
+      await blockchain.connectReadOnly();
+      
+      const status = await blockchain.getElectionStatus();
+      setElectionStatus({
+        electionId: status.electionId,
+        isActive: status.isActive,
+        phaseString: status.phaseString,
+        currentPhase: status.currentPhase,
+        registeredVoters: status.registeredVoters.toString()
+      });
+      
+      // Show warning if not in tallying phase
+      if (status.currentPhase !== 3) {
+        setError(
+          `Tallying is currently NOT ACTIVE. Current phase: ${status.phaseString}. ` +
+          `Please wait for the government authority to start the tallying phase.`
+        );
+      }
+    } catch (err) {
+      console.error('Failed to check election phase:', err);
+      setError('Warning: Could not verify election phase. ' + (err as Error).message);
+    } finally {
+      setIsCheckingPhase(false);
     }
   };
 
@@ -136,24 +185,32 @@ export default function TallyInterface() {
 
     setLoading(true);
     setError('');
+    setSuccess('');
     setVerification(null);
 
     try {
+      // Call the verifyVoteIntegrity method from TallyService
       const result = await tallyService.verifyVoteIntegrity(
         parseInt(kv),
         candidateChoice,
         r
       );
 
-      setVerification(result);
-      
+      setVerification({
+        valid: result.valid,
+        storedHash: result.storedHash,
+        calculatedHash: result.calculatedHash,
+        message: result.message,
+      });
+
       if (result.valid) {
-        setSuccess('✅ Vote verification successful! You can now tally this vote.');
+        setSuccess('✅ Verification successful! You can now proceed to tally.');
       } else {
-        setError('❌ ' + result.message);
+        setError('❌ Verification failed. ' + (result.message || 'The vote data does not match the stored hash.'));
       }
     } catch (err: any) {
-      setError(err.message);
+      setError('Verification error: ' + err.message);
+      setVerification(null);
     } finally {
       setLoading(false);
     }
@@ -170,11 +227,28 @@ export default function TallyInterface() {
       return;
     }
 
+    // Check if tallying phase is active
+    if (electionStatus && electionStatus.currentPhase !== 3) {
+      setError(
+        `Cannot tally vote: Tallying phase is not active. Current phase: ${electionStatus.phaseString}. ` +
+        `Please wait for the government authority to start the tallying phase.`
+      );
+      return;
+    }
+
     setLoading(true);
     setError('');
     setSuccess('');
 
     try {
+      // Double-check phase right before submitting
+      const blockchain = new BlockchainService(contractAddress, rpcUrl);
+      await blockchain.connectReadOnly();
+      const isTallyingActive = await blockchain.isTallyingPhaseActive();
+      if (!isTallyingActive) {
+        throw new Error('Tallying phase is not active. Please refresh and check the current phase.');
+      }
+
       const voteReveal: VoteReveal = {
         kv: parseInt(kv),
         candidateChoice,
@@ -205,7 +279,12 @@ export default function TallyInterface() {
         setError(result.error || 'Failed to tally vote');
       }
     } catch (err: any) {
-      setError(err.message);
+      const errorMessage = (err as Error).message;
+      if (errorMessage.includes('Operation not allowed in current phase')) {
+        setError('Vote tallying failed: Tallying phase is not active. The government authority needs to start the tallying phase first.');
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -262,6 +341,60 @@ export default function TallyInterface() {
             <p className="text-xs font-mono text-gray-800 break-all">
               {contractAddress}
             </p>
+          </div>
+        )}
+
+        {/* Election Phase Status */}
+        {electionStatus && (
+          <div className={`p-4 rounded-lg border-l-4 mb-6 ${
+            electionStatus.currentPhase === 3 
+              ? 'bg-green-50 border-green-500' 
+              : 'bg-yellow-50 border-yellow-500'
+          }`}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-gray-800">Election Phase Status</h3>
+              <button
+                onClick={() => checkElectionPhase()}
+                disabled={isCheckingPhase}
+                className="text-xs bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white px-3 py-1 rounded"
+              >
+                {isCheckingPhase ? 'Checking...' : 'Refresh'}
+              </button>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div>
+                <span className="font-medium text-gray-700">Election ID:</span>{' '}
+                <span className="text-gray-900">{electionStatus.electionId || 'None'}</span>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Election Active:</span>{' '}
+                <span className={electionStatus.isActive ? 'text-green-700 font-semibold' : 'text-red-700 font-semibold'}>
+                  {electionStatus.isActive ? 'Yes' : 'No'}
+                </span>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Current Phase:</span>{' '}
+                <span className={`font-semibold ${
+                  electionStatus.currentPhase === 3 ? 'text-green-700' : 'text-yellow-700'
+                }`}>
+                  {electionStatus.phaseString}
+                </span>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Registered Voters:</span>{' '}
+                <span className="text-gray-900">{electionStatus.registeredVoters}</span>
+              </div>
+              {electionStatus.currentPhase === 3 && (
+                <div className="mt-2 p-2 bg-green-100 rounded text-green-800 font-medium">
+                  ✓ Tallying is ACTIVE - You can tally votes now
+                </div>
+              )}
+              {electionStatus.currentPhase !== 3 && (
+                <div className="mt-2 p-2 bg-yellow-100 rounded text-yellow-800 font-medium">
+                  ⚠ Tallying is NOT ACTIVE - Wait for government to start tallying phase
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -479,10 +612,13 @@ export default function TallyInterface() {
             </h2>
             <button
               onClick={handleTally}
-              disabled={loading || !connected}
+              disabled={loading || !connected || (electionStatus && electionStatus.currentPhase !== 3)}
               className="w-full bg-green-600 text-black py-3 px-4 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold text-lg"
             >
-              {loading ? 'Tallying...' : '📊 Tally Vote on Blockchain'}
+              {loading ? 'Tallying...' : 
+               (electionStatus && electionStatus.currentPhase !== 3) ? 
+               `Cannot Tally - Phase: ${electionStatus.phaseString}` : 
+               '📊 Tally Vote on Blockchain'}
             </button>
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
               <p className="text-yellow-800 text-sm">

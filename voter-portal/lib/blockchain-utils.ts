@@ -279,6 +279,82 @@ export class BlockchainService {
       transactionHash: receipt.hash
     };
   }
+
+  /**
+   * Get current election phase
+   * @returns Current phase as number (0=SETUP, 1=REGISTRATION, 2=VOTING, 3=TALLYING, 4=ENDED)
+   */
+  async getCurrentPhase(): Promise<number> {
+    if (!this.contract) {
+      throw new Error('Contract not initialized');
+    }
+    const phase = await this.contract.getCurrentPhase();
+    return Number(phase);
+  }
+
+  /**
+   * Get current election phase as string
+   * @returns Phase name (SETUP, REGISTRATION, VOTING, TALLYING, ENDED)
+   */
+  async getCurrentPhaseString(): Promise<string> {
+    if (!this.contract) {
+      throw new Error('Contract not initialized');
+    }
+    return await this.contract.getCurrentPhaseString();
+  }
+
+  /**
+   * Get complete election status including phase information
+   */
+  async getElectionStatus(): Promise<{
+    electionId: string;
+    isActive: boolean;
+    isCompleted: boolean;
+    candidates: string[];
+    registeredVoters: bigint;
+    currentPhase: number;
+    phaseString: string;
+  }> {
+    if (!this.contract) {
+      throw new Error('Contract not initialized');
+    }
+    
+    const status = await this.contract.getElectionStatus();
+    
+    return {
+      electionId: status[0],
+      isActive: status[1],
+      isCompleted: status[2],
+      candidates: status[3],
+      registeredVoters: status[4],
+      currentPhase: Number(status[5]),
+      phaseString: status[6]
+    };
+  }
+
+  /**
+   * Check if registration phase is active
+   */
+  async isRegistrationPhaseActive(): Promise<boolean> {
+    const phase = await this.getCurrentPhase();
+    return phase === 1; // REGISTRATION = 1
+  }
+
+  /**
+   * Check if voting phase is active
+   */
+  async isVotingPhaseActive(): Promise<boolean> {
+    const phase = await this.getCurrentPhase();
+    return phase === 2; // VOTING = 2
+  }
+
+  /**
+   * Check if tallying phase is active
+   */
+  async isTallyingPhaseActive(): Promise<boolean> {
+    const phase = await this.getCurrentPhase();
+    return phase === 3; // TALLYING = 3
+  }
 }
 
 // Extend Window interface for TypeScript

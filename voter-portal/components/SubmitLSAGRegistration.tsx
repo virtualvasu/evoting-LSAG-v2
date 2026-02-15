@@ -42,6 +42,16 @@ export default function SubmitLSAGRegistration() {
   const [result, setResult] = useState<RegistrationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<'input' | 'connected' | 'result'>('input');
+  
+  // Phase checking state
+  const [electionStatus, setElectionStatus] = useState<{
+    electionId: string;
+    isActive: boolean;
+    phaseString: string;
+    currentPhase: number;
+    registeredVoters: string;
+  } | null>(null);
+  const [isCheckingPhase, setIsCheckingPhase] = useState(false);
 
   // Load deployment configuration on mount
   useEffect(() => {
@@ -58,10 +68,46 @@ export default function SubmitLSAGRegistration() {
       const config = await response.json();
       setContractAddress(config.contractAddress);
       setRpcUrl(config.rpcUrl || 'http://10.10.0.61:8550');
+      
+      // Check election phase after loading config
+      await checkElectionPhase(config.contractAddress, config.rpcUrl || 'http://10.10.0.61:8550');
     } catch (err) {
       setError('Failed to load contract config: ' + (err as Error).message);
     } finally {
       setIsLoadingConfig(false);
+    }
+  };
+
+  const checkElectionPhase = async (address?: string, rpc?: string) => {
+    setIsCheckingPhase(true);
+    try {
+      const blockchain = new BlockchainService(
+        address || contractAddress, 
+        rpc || rpcUrl
+      );
+      await blockchain.connectReadOnly();
+      
+      const status = await blockchain.getElectionStatus();
+      setElectionStatus({
+        electionId: status.electionId,
+        isActive: status.isActive,
+        phaseString: status.phaseString,
+        currentPhase: status.currentPhase,
+        registeredVoters: status.registeredVoters.toString()
+      });
+      
+      // Show warning if not in registration phase
+      if (status.currentPhase !== 1) {
+        setError(
+          `Registration is currently NOT ACTIVE. Current phase: ${status.phaseString}. ` +
+          `Please wait for the government authority to start the registration phase.`
+        );
+      }
+    } catch (err) {
+      console.error('Failed to check election phase:', err);
+      setError('Warning: Could not verify election phase. ' + (err as Error).message);
+    } finally {
+      setIsCheckingPhase(false);
     }
   };
 
@@ -133,12 +179,27 @@ export default function SubmitLSAGRegistration() {
       return;
     }
 
+    // Check if registration phase is active
+    if (electionStatus && electionStatus.currentPhase !== 1) {
+      setError(
+        `Cannot register: Registration phase is not active. Current phase: ${electionStatus.phaseString}. ` +
+        `Please wait for the government authority to start the registration phase.`
+      );
+      return;
+    }
+
     setIsProcessing(true);
     setError(null);
 
     try {
       const blockchain = new BlockchainService(contractAddress, rpcUrl);
       await blockchain.connectWallet();
+
+      // Double-check phase right before submitting
+      const isRegistrationActive = await blockchain.isRegistrationPhaseActive();
+      if (!isRegistrationActive) {
+        throw new Error('Registration phase is not active. Please refresh and check the current phase.');
+      }
 
       // Submit LSAG registration
       const registrationResult = await blockchain.submitLSAGRegistration(
@@ -162,7 +223,12 @@ export default function SubmitLSAGRegistration() {
       setResult(finalResult);
       setStep('result');
     } catch (err) {
-      setError('Failed to submit LSAG registration: ' + (err as Error).message);
+      const errorMessage = (err as Error).message;
+      if (errorMessage.includes('Operation not allowed in current phase')) {
+        setError('Registration failed: Registration phase is not active. The government authority needs to start the registration phase first.');
+      } else {
+        setError('Failed to submit LSAG registration: ' + errorMessage);
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -233,6 +299,60 @@ export default function SubmitLSAGRegistration() {
                 </div>
               </div>
             </div>
+
+            {/* Election Phase Status */}
+            {electionStatus && (
+              <div className={`p-4 rounded-lg border-l-4 ${
+                electionStatus.currentPhase === 1 
+                  ? 'bg-green-50 border-green-500' 
+                  : 'bg-yellow-50 border-yellow-500'
+              }`}>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-gray-800">Election Phase Status</h3>
+                  <button
+                    onClick={() => checkElectionPhase()}
+                    disabled={isCheckingPhase}
+                    className="text-xs bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white px-3 py-1 rounded"
+                  >
+                    {isCheckingPhase ? 'Checking...' : 'Refresh'}
+                  </button>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-700">Election ID:</span>{' '}
+                    <span className="text-gray-900">{electionStatus.electionId || 'None'}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Election Active:</span>{' '}
+                    <span className={electionStatus.isActive ? 'text-green-700 font-semibold' : 'text-red-700 font-semibold'}>
+                      {electionStatus.isActive ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Current Phase:</span>{' '}
+                    <span className={`font-semibold ${
+                      electionStatus.currentPhase === 1 ? 'text-green-700' : 'text-yellow-700'
+                    }`}>
+                      {electionStatus.phaseString}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Registered Voters:</span>{' '}
+                    <span className="text-gray-900">{electionStatus.registeredVoters}</span>
+                  </div>
+                  {electionStatus.currentPhase === 1 && (
+                    <div className="mt-2 p-2 bg-green-100 rounded text-green-800 font-medium">
+                      ✓ Registration is ACTIVE - You can register now
+                    </div>
+                  )}
+                  {electionStatus.currentPhase !== 1 && (
+                    <div className="mt-2 p-2 bg-yellow-100 rounded text-yellow-800 font-medium">
+                      ⚠ Registration is NOT ACTIVE - Wait for government to start registration phase
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* LSAG Input Options */}
             <div className="space-y-4">
@@ -368,10 +488,13 @@ export default function SubmitLSAGRegistration() {
             <div className="flex gap-4">
               <button
                 onClick={handleSubmit}
-                disabled={isProcessing}
+                disabled={isProcessing || (electionStatus && electionStatus.currentPhase !== 1)}
                 className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-black font-semibold py-3 px-6 rounded-lg transition-colors"
               >
-                {isProcessing ? 'Submitting to Blockchain...' : 'Submit Registration'}
+                {isProcessing ? 'Submitting to Blockchain...' : 
+                 (electionStatus && electionStatus.currentPhase !== 1) ? 
+                 `Cannot Submit - Phase: ${electionStatus.phaseString}` : 
+                 'Submit Registration'}
               </button>
               <button
                 onClick={handleReset}

@@ -1,178 +1,362 @@
 # LSAG-Based E-Voting System
 
-> **Network**: Deployed on private IITBH blockchain (RPC: http://10.10.0.61:8550) — Gas fees are not an issue
+> **Professional Blockchain Voting Platform** with Anonymous Authentication and Zero-Knowledge Privacy
 
-**Contract Address**: `0xED8CAB8a931A4C0489ad3E3FB5BdEA84f74fD23E`
-
----
-
-## System Overview
-
-![E-Voting Flow](flowcharts/evoting.png)
+[![Network Status](https://img.shields.io/badge/Network-IITBH%20Blockchain-blue)](http://10.10.0.61:8550)
+[![Smart Contract](https://img.shields.io/badge/Contract-0xED8CAB...fD23E-green)](#smart-contract)
+[![Architecture](https://img.shields.io/badge/Architecture-Modular%20Monorepo-orange)](#architecture)
 
 ---
 
-## Architecture & Components
+## 🏗️ Architecture Overview
 
-### Core Design Principle
-This protocol is designed to **eliminate the need for a central server**. The only two components in the system are:
-1. **Voter's Local Machine** - where all vote generation and verification happens
-2. **Blockchain Smart Contract** - immutable record keeping and verification
+This project is organized as a **professional modular monorepo** with three distinct, focused modules:
 
-There is **nothing in between** - no intermediate server or authority storing votes.
-
-### Interaction Modes
-
-#### 🖥️ **Main Branch (CLI Interface)**
-On the main branch, you'll find a **CLI-based interface** that allows users to interact with all election steps:
-- System setup and contract deployment
-- Voter registration with LSAG signatures
-- Vote generation and casting
-- Vote tallying and result verification
-
-Simply follow the election flow steps below to run the election through the command line.
-
-#### 🎨 **Frontend Testing Branch (GUI Interface)**
-For a beautiful graphical user interface, switch to the `frontend-testing` branch:
-```bash
-git checkout frontend-testing
+```
+evoting-lsag-v2/
+├── 🔗 blockchain/           # Smart contracts, deployment, and blockchain infrastructure
+├── 🗳️ voter-portal/         # Voter interface and participation tools
+├── 🏛️ government-portal/    # Administrator dashboard and election management
+├── 📚 docs/                # Centralized documentation hub
+├── 🔄 shared/              # Common utilities and types
+└── 📖 README.md            # This file
 ```
 
-After switching, set up both frontend applications:
+### Core Design Principles
 
-**Voter Portal:**
+✅ **Zero Server Architecture** - Only voter's machine + blockchain smart contract  
+✅ **Anonymous Voting** - LSAG (Linkable Spontaneous Anonymous Group) signatures  
+✅ **Cryptographic Privacy** - No vote content stored on blockchain  
+✅ **Modular Design** - Clean separation of concerns  
+✅ **Developer Experience** - Professional tooling and documentation  
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+- **Node.js** 18+ and npm
+- **MetaMask** wallet extension
+- **Git** for version control
+
+### 1. **Clone Repository**
 ```bash
-cd voter-portal
+git clone <repository-url>
+cd evoting-lsag-v2
+```
+
+### 2. **Setup Blockchain Module**
+```bash
+cd blockchain
 npm install
-npm run dev
+npx hardhat compile
 ```
 
-**Government Frontend:**
+### 3. **Deploy Smart Contracts** (Admin Only)
 ```bash
-cd government-frontend
-npm install
-npm run dev
-```
+# Deploy Secp256k1 library first
+npx hardhat run scripts/deploy/deploy-secp256k1.js --network iitbh
 
-This allows you to host local elections and interact with them through an intuitive graphical interface.
-
-> **Note**: Frontend development is still in progress. For the complete and stable experience, use the main branch CLI interface.
-
----
-
-## Election Flow
-
-### Phase 0: Deploy Smart Contracts
-
-**Step 0a: Deploy Secp256k1 Library** (REQUIRED FIRST)
-```bash
-npx hardhat run scripts/deploy-secp256k1.js --network iitbh
-```
-**Output**: Secp256k1 contract address (needed by EVoting)
-
-**Step 0b: Deploy EVoting Contract**
-```bash
+# Deploy main EVoting contract
 npx hardhat ignition deploy ignition/modules/Evoting.ts --network iitbh
 ```
-**Output**: EVoting contract address (uses Secp256k1 library)
 
-↓
-
-### Phase 1: System Setup
+### 4. **Start Government Portal**
 ```bash
-node scripts/admin/simple-setup.js
+cd government-portal
+npm install
+npm run dev
+# Access: http://localhost:3000
 ```
-- Creates config directory
-- Generates government authority keys (ECDSA)
-- Saves `deployment.json` and `government-config.json`
 
-↓
-
-### Phase 1.5: Voter Registration (LSAG-based)
-
-**Step 1: Generate Key Pair**
+### 5. **Start Voter Portal**
 ```bash
-node scripts/generate-keypair.js
+cd voter-portal  
+npm install
+npm run dev
+# Access: http://localhost:3001
 ```
-**Output**: Private key + Public key (64 bytes) - save both ✅
 
-**Step 2: Pre-Register with Government**
+---
+
+## 📋 Module Overview
+
+### 🔗 Blockchain Module
+**Location**: [`blockchain/`](blockchain/)  
+**Purpose**: Smart contract infrastructure, deployment, and blockchain utilities
+
+**Key Components:**
+- **Solidity Contracts** - Core voting logic with LSAG verification
+- **Deployment Scripts** - Automated contract deployment
+- **Monitoring Tools** - Election status and transaction checking
+- **Configuration** - Network settings and contract addresses
+
+**Documentation**: [`blockchain/README.md`](blockchain/README.md)
+
+---
+
+### 🗳️ Voter Portal  
+**Location**: [`voter-portal/`](voter-portal/)  
+**Purpose**: Complete voter experience from registration to vote casting
+
+**Key Features:**
+- **Key Generation** - Secure cryptographic keypair creation
+- **Certificate Upload** - Government-signed voter authentication
+- **LSAG Registration** - Anonymous registration with ring signatures  
+- **Vote Casting** - Private vote generation and submission
+- **Vote Tallying** - Collaborative result computation
+
+**Documentation**: [`voter-portal/README.md`](voter-portal/README.md)
+
+---
+
+### 🏛️ Government Portal
+**Location**: [`government-portal/`](government-portal/)  
+**Purpose**: Election administration and voter certificate management  
+
+**Key Features:**
+- **Voter Certification** - Generate cryptographically signed certificates
+- **Election Management** - Full lifecycle election control
+- **Ring Management** - Voter ring construction and verification
+- **Result Monitoring** - Real-time election status dashboard
+
+**Documentation**: [`government-portal/README.md`](government-portal/README.md)
+
+---
+
+### 📚 Documentation Hub
+**Location**: [`docs/`](docs/)  
+**Purpose**: Centralized, comprehensive project documentation
+
+**Structure:**
+- **Architecture** - System design and module interactions
+- **Protocol** - LSAG signature scheme and voting protocol
+- **Guides** - Step-by-step user and developer guides  
+- **Implementation** - Technical implementation details
+- **API Reference** - Smart contract and frontend APIs
+
+---
+
+### 🔄 Shared Resources
+**Location**: [`shared/`](shared/)  
+**Purpose**: Common utilities to avoid code duplication
+
+**Contents:**
+- **Types** - TypeScript interfaces and type definitions
+- **Constants** - Shared configuration and constants
+- **Utils** - Cross-module utility functions
+
+---
+
+## 🔄 Election Workflow
+
+### Phase 1: **Setup** (Government)
+1. Deploy smart contracts using blockchain module
+2. Generate government authority keypair
+3. Launch government portal for administration
+
+### Phase 2: **Registration** (Voters + Government)  
+1. Voters generate cryptographic keypairs
+2. Government issues signed voter certificates
+3. Voters upload certificates to blockchain (ring formation)
+4. Voters generate LSAG signatures for anonymous registration
+
+### Phase 3: **Voting** (Voters)
+1. Generate anonymous votes with LSAG proofs
+2. Submit encrypted vote hashes to blockchain
+3. Store vote data locally for later tallying
+
+### Phase 4: **Tallying** (Collaborative)
+1. Voters reveal vote data for verification
+2. Blockchain verifies vote integrity 
+3. Results computed and announced transparently
+
+---
+
+## 🛠️ Development
+
+### Workspace Commands
+
 ```bash
-node scripts/pre_registration/pre-register-voter.js
-```
-**Input**: Voter name, public key (from Step 1), student ID  
-**Output**: `CERT_<sid>.json` (government-signed certificate) ✅
+# Install all dependencies
+npm run install:all
 
-**Step 3: Update Voter Ring**
+# Build blockchain module
+npm run build:blockchain
+
+# Build voter portal
+npm run build:voter
+
+# Build government portal  
+npm run build:gov
+
+# Start development servers
+npm run dev:voter
+npm run dev:gov
+```
+
+### Module-Specific Development
+
+**Blockchain Module:**
 ```bash
-node scripts/registration_new/update_voter_ring.js scripts/pre_registration/CERT_<sid>.json
+cd blockchain
+npm run compile    # Compile contracts
+npm run deploy     # Deploy to network
+npm run test       # Run contract tests
+npm run verify     # Verify on explorer
 ```
-**Output**: Voter added to ring, returns ring members + voter position ✅
 
-**Step 4: Generate LSAG Signature**
+**Frontend Modules:**
 ```bash
-ORIGINAL_PRIVATE_KEY=0x... REGISTERED_PUBLIC_KEY=0x... VOTER_NAME="..." VOTER_SID="..." \
-npx hardhat run scripts/registration_new/generate-lsag-signature.js --network iitbh
+cd voter-portal    # or government-portal
+npm run dev        # Start development server  
+npm run build      # Production build
+npm run lint       # Code linting
+npm run type-check # TypeScript validation
 ```
-**Output**: `LSAG_<sid>.json` (signature proving ring membership) ✅
 
-**Step 5: Submit Registration (BBverify)**
+---
+
+## 🔧 Configuration
+
+### Environment Setup
+
+**Blockchain Module** (`.env`):
 ```bash
-LSAG_FILE=scripts/pre_registration/LSAG_<sid>.json \
-npx hardhat run scripts/registration_new/submit-lsag-registration.js --network iitbh
+PRIVATE_KEY=0x...                              # Deployment wallet
+IITBH_RPC_URL=http://10.10.0.61:8550         # Network RPC
 ```
-**Output**: **Kv (Registration Index)** - voter is now registered & can vote ✅
 
-↓
-
-### Phase 2: Vote Casting (PKS Signature-Based)
-
-**Step 1: Generate and Cast Vote**
+**Portal Modules** (`.env.local`):
 ```bash
-NEW_PRIVATE_KEY=0x... CANDIDATE_CHOICE=A KV=<registration_index> node scripts/voting/generate-vote.js
+NEXT_PUBLIC_CONTRACT_ADDRESS=0x...             # EVoting contract
+NEXT_PUBLIC_RPC_URL=http://10.10.0.61:8550   # Blockchain RPC
+NEXT_PUBLIC_CHAIN_ID=1337                     # Network chain ID  
 ```
-**Input**: 
-- `NEW_PRIVATE_KEY`: Voter's signing key
-- `CANDIDATE_CHOICE`: Candidate (A, B, C, D, or E)
-- `KV`: Registration index from Phase 1.5
 
-**Local Machine** (Off-chain):
-- Generates random value `r` (32 bytes)
-- Computes vote hash: `h_v = keccak256(candidate || r)`
-- Signs hash with voter's private key (PKS signature: r, s, v)
-- Saves vote file to `scripts/config/vote_<timestamp>.json` ✅
+### Network Information
+- **Network**: Private IITBH Blockchain
+- **RPC Endpoint**: `http://10.10.0.61:8550`
+- **Chain ID**: `1337`
+- **Contract**: `0xED8CAB8a931A4C0489ad3E3FB5BdEA84f74fD23E`
 
-**Blockchain** (On-chain):
-- Calls `BBvoting(kv, h_v, r, s, v)` (~60k gas)
-- Stores vote in registration table T[kv][2] = h_v
+---
 
-↓
+## 📖 Documentation Links
 
-### Phase 3: Vote Tallying (Verification & Counting)
+| Resource | Description | Link |
+|----------|-------------|------|
+| **System Architecture** | High-level design overview | [`docs/architecture/system-overview.md`](docs/architecture/system-overview.md) |
+| **LSAG Protocol** | Cryptographic signature scheme | [`docs/protocol/lsag-signature-scheme.md`](docs/protocol/lsag-signature-scheme.md) |
+| **Deployment Guide** | Complete setup instructions | [`docs/guides/deployment-guide.md`](docs/guides/deployment-guide.md) |
+| **Voter Guide** | How to participate in elections | [`docs/guides/voter-guide.md`](docs/guides/voter-guide.md) |
+| **Admin Guide** | Election administration | [`docs/guides/admin-guide.md`](docs/guides/admin-guide.md) |
+| **Smart Contract API** | Contract interface reference | [`docs/api/smart-contract-api.md`](docs/api/smart-contract-api.md) |
+| **Legacy README** | Original documentation | [`docs/LEGACY_README.md`](docs/LEGACY_README.md) |
 
-**Step 1: Tally Votes**
+---
+
+## 🤝 Contributing
+
+### Adding New Features
+1. Identify the appropriate module (`blockchain/`, `voter-portal/`, `government-portal/`)
+2. Implement feature following module conventions
+3. Update module-specific README if needed
+4. Update root README if architecture changes
+
+### Shared Code Guidelines
+- Place reusable utilities in `shared/` directory  
+- Update TypeScript types in `shared/types/`
+- Document shared functions thoroughly
+
+### Development Workflow
+1. Create feature branch: `git checkout -b feature/description`
+2. Implement changes in appropriate modules
+3. Test thoroughly across affected modules
+4. Update documentation as needed  
+5. Submit pull request with clear description
+
+---
+
+## 🔒 Security Considerations
+
+### Cryptographic Security
+- **Private Keys** - Never commit to version control
+- **LSAG Signatures** - Quantum-resistant elliptic curve cryptography
+- **Vote Privacy** - Only hashes stored on blockchain, full votes stored locally
+
+### Network Security  
+- **Private Blockchain** - Controlled network environment
+- **Contract Verification** - All smart contracts auditable
+- **Frontend Validation** - Client-side cryptographic verification
+
+### Operational Security
+- **Environment Variables** - Sensitive data in `.env` files (gitignored)
+- **Certificate Signing** - Government authority key protection
+- **Vote Storage** - Local storage for vote privacy
+
+---
+
+## 📊 Project Statistics
+
+| Metric | Value |
+|--------|--------|
+| **Modules** | 3 (blockchain, voter-portal, government-portal) |
+| **Smart Contracts** | 4 (Evoting, Secp256k1, ECOperations, MessageHashUtils) |
+| **Documentation Files** | 15+ comprehensive guides |
+| **Supported Networks** | IITBH Private Blockchain |
+| **Frontend Framework** | Next.js 16+ with React 19 |
+| **Blockchain Framework** | Hardhat with OpenZeppelin |
+
+---
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Contract Deployment Fails**
 ```bash
-VOTE_FILE=scripts/config/vote_<timestamp>.json node scripts/voting/tally-votes.js
+cd blockchain
+npm run compile
+# Check network connection and private key
 ```
-**Input**: Path to vote file from Phase 2
 
-**Local Machine** (Off-chain):
-- Extracts: `kv` (voter index), `candidate`, `r` (random value)
-- Verifies vote integrity: `keccak256(candidate || r)` locally ✅
-
-**Blockchain** (On-chain):
-- Calls `BBtally(kv, candidate, r)` (~49k gas) to verify & count vote
-- Increments candidate vote count R[candidate]
-- Retrieves final election results for all candidates (A-E)
-
-**Output**: 
+**Frontend Build Errors**  
+```bash
+cd voter-portal  # or government-portal
+rm -rf .next node_modules
+npm install
+npm run build
 ```
-Election Results:
-- Candidate A: X votes
-- Candidate B: Y votes
-- ...
-- Total: N votes
-```
-✅ Results displayed
 
+**MetaMask Connection Issues**
+1. Ensure MetaMask is installed and unlocked
+2. Add IITBH network manually:
+   - RPC: `http://10.10.0.61:8550`
+   - Chain ID: `1337`
+3. Import deployment wallet if needed
 
+### Support Resources
+- **Issues**: GitHub Issues for bug reports
+- **Documentation**: Comprehensive guides in [`docs/`](docs/)  
+- **Code Examples**: Working examples in each module
+- **Legacy Documentation**: [`docs/LEGACY_README.md`](docs/LEGACY_README.md)
+
+---
+
+## 📄 License
+
+This project is developed for research and educational purposes. Please refer to the LICENSE file for detailed terms and conditions.
+
+---
+
+## 🏆 Acknowledgments
+
+- **LSAG Cryptography** - Implementation based on academic research
+- **Elliptic Curve Operations** - Optimized for blockchain efficiency  
+- **Hardhat Framework** - Professional Ethereum development tooling
+- **Next.js Framework** - Modern React development platform
+
+---
+
+**Built with ❤️ for transparent, private, and secure digital democracy**

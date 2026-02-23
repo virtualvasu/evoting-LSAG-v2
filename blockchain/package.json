@@ -1,0 +1,42 @@
+{
+  "name": "evoting-blockchain",
+  "version": "1.0.0",
+  "description": "Smart contract infrastructure for LSAG-based E-Voting System",
+  "main": "hardhat.config.js",
+  "scripts": {
+    "compile": "npx hardhat compile",
+    "deploy:secp256k1": "npx hardhat run scripts/deploy/deploy-secp256k1.js --network iitbh",
+    "deploy:evoting": "npx hardhat ignition deploy ignition/modules/Evoting.ts --network iitbh",
+    "deploy:local": "npm run deploy:secp256k1 -- --network localhost && npm run deploy:evoting -- --network localhost",
+    "redeploy": "./scripts/deploy/redeploy-all.sh",
+    "setup": "node scripts/admin/simple-setup.js",
+    "check:status": "node scripts/monitoring/check-election-status.js",
+    "check:ring": "node scripts/monitoring/check-ring.js",
+    "check:registration": "node scripts/monitoring/check-registration-table.js",
+    "demo": "node scripts/testing/complete-demo.js",
+    "test": "npx hardhat test",
+    "node": "npx hardhat node",
+    "clean": "npx hardhat clean"
+  },
+  "keywords": [
+    "blockchain",
+    "voting",
+    "lsag",
+    "ethereum",
+    "hardhat",
+    "solidity"
+  ],
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
+    "hardhat": "^2.26.1"
+  },
+  "dependencies": {
+    "@noble/curves": "^1.9.7",
+    "@noble/hashes": "^1.8.0",
+    "@openzeppelin/contracts": "^5.4.0",
+    "crypto-js": "^4.2.0",
+    "dotenv": "^17.2.1",
+    "ethers": "^6.15.0",
+    "secp256k1": "^5.0.1"
+  }
+}

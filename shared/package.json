@@ -1,0 +1,17 @@
+{
+  "name": "evoting-shared",
+  "version": "1.0.0",
+  "description": "Shared utilities and types for LSAG-based E-Voting System",
+  "main": "index.ts",
+  "types": "types/index.ts",
+  "private": true,
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "ethers": "^6.15.0"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}

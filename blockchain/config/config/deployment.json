@@ -1,0 +1,11 @@
+{
+  "contractAddress": "0xE555304c7E7333465f5a229C2185694532C70E55",
+  "setupTime": "2026-02-15T11:14:36.415Z",
+  "network": "iitbh",
+  "chainId": "491002",
+  "note": "EVoting with Simple LSAG implementation - forward-chaining verification",
+  "secp256k1Address": "0x81A2a3F8c541E3df4Be6A4eeeDF423B488480DD0",
+  "secp256k1DeployedAt": "2026-02-15T11:14:22.059Z",
+  "evotingAddress": "0xE555304c7E7333465f5a229C2185694532C70E55",
+  "evotingDeployedAt": "2026-02-15T11:14:36.415Z"
+}

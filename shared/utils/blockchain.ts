@@ -3,6 +3,16 @@ import { ethers } from 'ethers';
 import { NETWORKS } from '../constants';
 import type { NetworkConfig, TransactionResult, ElectionStatus } from '../types';
 
+// Extend Window interface for MetaMask
+declare global {
+  interface Window {
+    ethereum?: {
+      request: (args: { method: string; params?: any[] }) => Promise<any>;
+      isMetaMask?: boolean;
+    };
+  }
+}
+
 export class SharedBlockchainUtils {
   private provider: ethers.Provider | null = null;
   private signer: ethers.Signer | null = null;
@@ -21,7 +31,7 @@ export class SharedBlockchainUtils {
       if (typeof window !== 'undefined' && window.ethereum) {
         // Browser environment with MetaMask
         this.provider = new ethers.BrowserProvider(window.ethereum);
-        this.signer = await this.provider.getSigner();
+        this.signer = await (this.provider as ethers.BrowserProvider).getSigner();
       } else {
         // Node.js environment or server-side
         this.provider = new ethers.JsonRpcProvider(this.networkConfig.rpc);

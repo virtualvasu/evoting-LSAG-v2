@@ -73,6 +73,7 @@ export interface WalletConnection {
   address?: string;
   chainId?: number;
   balance?: string;
+  error?: string;
 }
 
 // Government portal specific types

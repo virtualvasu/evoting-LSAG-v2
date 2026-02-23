@@ -10,6 +10,16 @@ import type {
   TransactionResult 
 } from '../types';
 
+// Extend Window interface for MetaMask
+declare global {
+  interface Window {
+    ethereum?: {
+      request: (args: { method: string; params?: any[] }) => Promise<any>;
+      isMetaMask?: boolean;
+    };
+  }
+}
+
 /**
  * Network and wallet utilities
  */

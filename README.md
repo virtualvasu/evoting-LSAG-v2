@@ -8,31 +8,31 @@
 
 ---
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 This project is organized as a **professional modular monorepo** with three distinct, focused modules:
 
 ```
 evoting-lsag-v2/
-├── 🔗 blockchain/           # Smart contracts, deployment, and blockchain infrastructure
-├── 🗳️ voter-portal/         # Voter interface and participation tools
-├── 🏛️ government-portal/    # Administrator dashboard and election management
-├── 📚 docs/                # Centralized documentation hub
-├── 🔄 shared/              # Common utilities and types
-└── 📖 README.md            # This file
+├── blockchain/           # Smart contracts, deployment, and blockchain infrastructure
+├── voter-portal/         # Voter interface and participation tools
+├── government-portal/    # Administrator dashboard and election management
+├── docs/                # Centralized documentation hub
+├── shared/              # Common utilities and types
+└── README.md            # This file
 ```
 
 ### Core Design Principles
 
-✅ **Zero Server Architecture** - Only voter's machine + blockchain smart contract  
-✅ **Anonymous Voting** - LSAG (Linkable Spontaneous Anonymous Group) signatures  
-✅ **Cryptographic Privacy** - No vote content stored on blockchain  
-✅ **Modular Design** - Clean separation of concerns  
-✅ **Developer Experience** - Professional tooling and documentation  
+- **Zero Server Architecture** - Only voter's machine + blockchain smart contract  
+- **Anonymous Voting** - LSAG (Linkable Spontaneous Anonymous Group) signatures  
+- **Cryptographic Privacy** - No vote content stored on blockchain  
+- **Modular Design** - Clean separation of concerns  
+- **Developer Experience** - Professional tooling and documentation  
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - **Node.js** 18+ and npm
@@ -79,9 +79,9 @@ npm run dev
 
 ---
 
-## 📋 Module Overview
+## Module Overview
 
-### 🔗 Blockchain Module
+### Blockchain Module
 **Location**: [`blockchain/`](blockchain/)  
 **Purpose**: Smart contract infrastructure, deployment, and blockchain utilities
 
@@ -95,7 +95,7 @@ npm run dev
 
 ---
 
-### 🗳️ Voter Portal  
+### Voter Portal  
 **Location**: [`voter-portal/`](voter-portal/)  
 **Purpose**: Complete voter experience from registration to vote casting
 
@@ -110,7 +110,7 @@ npm run dev
 
 ---
 
-### 🏛️ Government Portal
+### Government Portal
 **Location**: [`government-portal/`](government-portal/)  
 **Purpose**: Election administration and voter certificate management  
 
@@ -124,7 +124,7 @@ npm run dev
 
 ---
 
-### 📚 Documentation Hub
+### Documentation Hub
 **Location**: [`docs/`](docs/)  
 **Purpose**: Centralized, comprehensive project documentation
 
@@ -137,7 +137,7 @@ npm run dev
 
 ---
 
-### 🔄 Shared Resources
+### Shared Resources
 **Location**: [`shared/`](shared/)  
 **Purpose**: Common utilities to avoid code duplication
 
@@ -148,7 +148,7 @@ npm run dev
 
 ---
 
-## 🔄 Election Workflow
+## Election Workflow
 
 ### Phase 1: **Setup** (Government)
 1. Deploy smart contracts using blockchain module
@@ -173,7 +173,7 @@ npm run dev
 
 ---
 
-## 🛠️ Development
+## Development
 
 ### Workspace Commands
 
@@ -217,7 +217,7 @@ npm run type-check # TypeScript validation
 
 ---
 
-## 🔧 Configuration
+## Configuration
 
 ### Environment Setup
 
@@ -242,7 +242,7 @@ NEXT_PUBLIC_CHAIN_ID=1337                     # Network chain ID
 
 ---
 
-## 📖 Documentation Links
+## Documentation Links
 
 | Resource | Description | Link |
 |----------|-------------|------|
@@ -256,7 +256,7 @@ NEXT_PUBLIC_CHAIN_ID=1337                     # Network chain ID
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 ### Adding New Features
 1. Identify the appropriate module (`blockchain/`, `voter-portal/`, `government-portal/`)
@@ -278,7 +278,7 @@ NEXT_PUBLIC_CHAIN_ID=1337                     # Network chain ID
 
 ---
 
-## 🔒 Security Considerations
+## Security Considerations
 
 ### Cryptographic Security
 - **Private Keys** - Never commit to version control
@@ -297,7 +297,7 @@ NEXT_PUBLIC_CHAIN_ID=1337                     # Network chain ID
 
 ---
 
-## 📊 Project Statistics
+## Project Statistics
 
 | Metric | Value |
 |--------|--------|
@@ -310,7 +310,7 @@ NEXT_PUBLIC_CHAIN_ID=1337                     # Network chain ID
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -344,13 +344,13 @@ npm run build
 
 ---
 
-## 📄 License
+## License
 
 This project is developed for research and educational purposes. Please refer to the LICENSE file for detailed terms and conditions.
 
 ---
 
-## 🏆 Acknowledgments
+## Acknowledgments
 
 - **LSAG Cryptography** - Implementation based on academic research
 - **Elliptic Curve Operations** - Optimized for blockchain efficiency  
@@ -359,4 +359,4 @@ This project is developed for research and educational purposes. Please refer to
 
 ---
 
-**Built with ❤️ for transparent, private, and secure digital democracy**
+**Built for transparent, private, and secure digital democracy**

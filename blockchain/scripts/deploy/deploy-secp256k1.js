@@ -16,7 +16,7 @@ async function main() {
     
     // Save to config
     const fs = require('fs');
-    const configPath = './scripts/config/deployment.json';
+    const configPath = './config/config/deployment.json';
     let config = {};
     
     try {

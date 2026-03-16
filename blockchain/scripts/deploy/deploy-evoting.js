@@ -11,7 +11,7 @@ async function main() {
     console.log("Network:", network.name, "Chain ID:", network.chainId.toString());
     
     // Read Secp256k1 address from config
-    const configPath = './scripts/config/deployment.json';
+    const configPath = './config/config/deployment.json';
     let config = {};
     
     try {

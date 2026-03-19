@@ -37,6 +37,142 @@ export default function ElectionManagement() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [contract, setContract] = useState<ethers.Contract | null>(null);
+  const [signerAddress, setSignerAddress] = useState<string>('');
+  const [ownerAddress, setOwnerAddress] = useState<string>('');
+  const [configuredChainId, setConfiguredChainId] = useState<string>('');
+  const [connectedChainId, setConnectedChainId] = useState<string>('');
+
+  const isOwner = Boolean(
+    signerAddress &&
+    ownerAddress &&
+    signerAddress.toLowerCase() === ownerAddress.toLowerCase()
+  );
+
+  const shortenAddress = (address: string) => {
+    if (!address) return 'Not connected';
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
+
+  const extractRevertData = (error: any): string | null => {
+    return (
+      error?.data?.data ??
+      error?.info?.error?.data?.data ??
+      error?.info?.error?.data ??
+      error?.error?.data?.data ??
+      error?.error?.data ??
+      null
+    );
+  };
+
+  const getReadableErrorMessage = (error: any) => {
+    const revertData = extractRevertData(error);
+
+    if (revertData && contract) {
+      try {
+        const parsedError = contract.interface.parseError(revertData);
+
+        if (parsedError?.name === 'OwnableUnauthorizedAccount') {
+          const unauthorizedAccount = String(parsedError.args?.[0] ?? signerAddress ?? 'unknown account');
+          const expectedOwner = ownerAddress || 'the contract owner';
+          return `Connected wallet ${unauthorizedAccount} is not the contract owner. Switch MetaMask to ${expectedOwner} before starting or managing an election.`;
+        }
+
+        if (parsedError?.name) {
+          return `Contract reverted with ${parsedError.name}.`;
+        }
+      } catch {
+        // Fall through to generic parsing below.
+      }
+    }
+
+    if (typeof error?.reason === 'string' && error.reason.length > 0) {
+      return error.reason;
+    }
+
+    if (typeof error?.shortMessage === 'string' && error.shortMessage.length > 0) {
+      return error.shortMessage;
+    }
+
+    if (typeof error?.message === 'string' && error.message.length > 0) {
+      if (error.message.includes('execution reverted')) {
+        return 'Transaction reverted by the contract. Make sure you are connected with the contract owner wallet.';
+      }
+
+      return error.message;
+    }
+
+    return 'Transaction failed';
+  };
+
+  const refreshContractAccess = async (evotingContract: ethers.Contract, connectedAddress?: string) => {
+    try {
+      const [owner, network] = await Promise.all([
+        evotingContract.owner(),
+        evotingContract.runner?.provider?.getNetwork()
+      ]);
+
+      setOwnerAddress(owner);
+      setConnectedChainId(network ? network.chainId.toString() : '');
+
+      if (connectedAddress) {
+        setSignerAddress(connectedAddress);
+      }
+    } catch (error) {
+      console.error('Failed to refresh contract access details:', error);
+    }
+  };
+
+  const ensureOwnerAccess = async () => {
+    if (!contract) return false;
+
+    const [connectedAddress, owner] = await Promise.all([
+      contract.runner && 'getAddress' in contract.runner
+        ? contract.runner.getAddress()
+        : Promise.resolve(signerAddress),
+      contract.owner()
+    ]);
+
+    setSignerAddress(connectedAddress);
+    setOwnerAddress(owner);
+
+    if (connectedAddress.toLowerCase() !== owner.toLowerCase()) {
+      setMessage({
+        type: 'error',
+        text: `Connected wallet ${connectedAddress} is not the contract owner. Switch MetaMask to ${owner} and try again.`
+      });
+      return false;
+    }
+
+    return true;
+  };
+
+  const runOwnerAction = async (
+    action: () => Promise<ethers.ContractTransactionResponse>,
+    successText: string
+  ) => {
+    if (!contract) return;
+
+    const hasOwnerAccess = await ensureOwnerAccess();
+    if (!hasOwnerAccess) return false;
+
+    setLoading(true);
+    try {
+      const tx = await action();
+      await tx.wait();
+
+      setMessage({ type: 'success', text: successText });
+      await Promise.all([
+        loadElectionStatus(),
+        refreshContractAccess(contract)
+      ]);
+      return true;
+    } catch (error: any) {
+      setMessage({ type: 'error', text: getReadableErrorMessage(error) });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Initialize contract
   useEffect(() => {
@@ -44,6 +180,26 @@ export default function ElectionManagement() {
     // wrapped in timeout to ensure contract is set if possible, but actually dependency array [] runs once. 
     // We need to call loadElectionStatus after contract is set. 
     // Effect for contract change would be better.
+  }, []);
+
+  useEffect(() => {
+    if (!window.ethereum) return;
+
+    const handleAccountsChanged = () => {
+      initContract();
+    };
+
+    const handleChainChanged = () => {
+      initContract();
+    };
+
+    window.ethereum.on('accountsChanged', handleAccountsChanged);
+    window.ethereum.on('chainChanged', handleChainChanged);
+
+    return () => {
+      window.ethereum?.removeListener?.('accountsChanged', handleAccountsChanged);
+      window.ethereum?.removeListener?.('chainChanged', handleChainChanged);
+    };
   }, []);
 
   useEffect(() => {
@@ -62,35 +218,22 @@ export default function ElectionManagement() {
 
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
+      const connectedAddress = await signer.getAddress();
 
       // Load contract config
       const configResponse = await fetch('/contract-config.json');
       const config = await configResponse.json();
 
-      const contractABI = [
-        "function startElection(string memory _electionId, string[] memory _candidates)",
-        "function endElection()",
-        "function resetElectionData()",
-        "function getElectionStatus() view returns (string, bool, bool, string[], uint256, uint8, string)",
-        "function getCandidates() view returns (string[])",
-        "function startRegistrationPhase()",
-        "function stopRegistrationPhase()",
-        "function startVotingPhase()",
-        "function stopVotingPhase()",
-        "function startTallyingPhase()",
-        "function stopTallyingPhase()",
-        "function getCurrentPhase() view returns (uint8)",
-        "function getCurrentPhaseString() view returns (string)",
-        "function owner() view returns (address)"
-      ];
-
       const evotingContract = new ethers.Contract(
         config.contractAddress,
-        contractABI,
+        config.abi,
         signer
       );
 
+      setConfiguredChainId(config.chainId || '');
+      setSignerAddress(connectedAddress);
       setContract(evotingContract);
+      await refreshContractAccess(evotingContract, connectedAddress);
     } catch (error) {
       console.error('Contract initialization failed:', error);
       setMessage({ type: 'error', text: 'Failed to initialize contract' });
@@ -144,147 +287,96 @@ export default function ElectionManagement() {
       return;
     }
 
-    setLoading(true);
-    try {
-      // Use candidate names directly (no conversion needed)
-      const candidateNames = newElection.candidates.map(c => c.name.trim());
+    const candidateNames = newElection.candidates.map(c => c.name.trim());
 
-      const tx = await contract.startElection(newElection.electionId, candidateNames);
-      await tx.wait();
+    const success = await runOwnerAction(
+      () => contract.startElection(newElection.electionId.trim(), candidateNames),
+      'Election started successfully!'
+    );
 
-      setMessage({ type: 'success', text: 'Election started successfully!' });
-      await loadElectionStatus();
-      
-      // Reset form
+    if (success) {
       setNewElection({ 
         electionId: '', 
         candidates: [
-            { id: 'A', name: '' },
-            { id: 'B', name: '' },
-            { id: 'C', name: '' }
+          { id: 'A', name: '' },
+          { id: 'B', name: '' },
+          { id: 'C', name: '' }
         ] 
       });
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Failed to start election' });
     }
-    setLoading(false);
   };
 
   const handleEndElection = async () => {
     if (!contract) return;
 
-    setLoading(true);
-    try {
-      const tx = await contract.endElection();
-      await tx.wait();
-
-      setMessage({ type: 'success', text: 'Election ended successfully!' });
-      await loadElectionStatus();
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Failed to end election' });
-    }
-    setLoading(false);
+    await runOwnerAction(
+      () => contract.endElection(),
+      'Election ended successfully!'
+    );
   };
 
   const handleResetElectionData = async () => {
     if (!contract) return;
 
-    setLoading(true);
-    try {
-      const tx = await contract.resetElectionData();
-      await tx.wait();
-
-      setMessage({ type: 'success', text: 'Election data reset successfully!' });
-      await loadElectionStatus();
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Failed to reset election data' });
-    }
-    setLoading(false);
+    await runOwnerAction(
+      () => contract.resetElectionData(),
+      'Election data reset successfully!'
+    );
   };
 
   // Phase Control Handlers
   const handleStartRegistrationPhase = async () => {
     if (!contract) return;
-    setLoading(true);
-    try {
-      const tx = await contract.startRegistrationPhase();
-      await tx.wait();
-      setMessage({ type: 'success', text: 'Registration phase started!' });
-      await loadElectionStatus();
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Failed to start registration phase' });
-    }
-    setLoading(false);
+
+    await runOwnerAction(
+      () => contract.startRegistrationPhase(),
+      'Registration phase started!'
+    );
   };
 
   const handleStopRegistrationPhase = async () => {
     if (!contract) return;
-    setLoading(true);
-    try {
-      const tx = await contract.stopRegistrationPhase();
-      await tx.wait();
-      setMessage({ type: 'success', text: 'Registration phase stopped!' });
-      await loadElectionStatus();
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Failed to stop registration phase' });
-    }
-    setLoading(false);
+
+    await runOwnerAction(
+      () => contract.stopRegistrationPhase(),
+      'Registration phase stopped!'
+    );
   };
 
   const handleStartVotingPhase = async () => {
     if (!contract) return;
-    setLoading(true);
-    try {
-      const tx = await contract.startVotingPhase();
-      await tx.wait();
-      setMessage({ type: 'success', text: 'Voting phase started!' });
-      await loadElectionStatus();
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Failed to start voting phase' });
-    }
-    setLoading(false);
+
+    await runOwnerAction(
+      () => contract.startVotingPhase(),
+      'Voting phase started!'
+    );
   };
 
   const handleStopVotingPhase = async () => {
     if (!contract) return;
-    setLoading(true);
-    try {
-      const tx = await contract.stopVotingPhase();
-      await tx.wait();
-      setMessage({ type: 'success', text: 'Voting phase stopped!' });
-      await loadElectionStatus();
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Failed to stop voting phase' });
-    }
-    setLoading(false);
+
+    await runOwnerAction(
+      () => contract.stopVotingPhase(),
+      'Voting phase stopped!'
+    );
   };
 
   const handleStartTallyingPhase = async () => {
     if (!contract) return;
-    setLoading(true);
-    try {
-      const tx = await contract.startTallyingPhase();
-      await tx.wait();
-      setMessage({ type: 'success', text: 'Tallying phase started!' });
-      await loadElectionStatus();
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Failed to start tallying phase' });
-    }
-    setLoading(false);
+
+    await runOwnerAction(
+      () => contract.startTallyingPhase(),
+      'Tallying phase started!'
+    );
   };
 
   const handleStopTallyingPhase = async () => {
     if (!contract) return;
-    setLoading(true);
-    try {
-      const tx = await contract.stopTallyingPhase();
-      await tx.wait();
-      setMessage({ type: 'success', text: 'Tallying phase stopped!' });
-      await loadElectionStatus();
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Failed to stop tallying phase' });
-    }
-    setLoading(false);
+
+    await runOwnerAction(
+      () => contract.stopTallyingPhase(),
+      'Tallying phase stopped!'
+    );
   };
 
   const addCandidate = () => {
@@ -317,6 +409,35 @@ export default function ElectionManagement() {
       {/* Current Election Status */}
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Election Status</h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <p className="text-sm text-gray-600">Connected Wallet:</p>
+            <p className={`font-mono text-sm ${isOwner ? 'text-green-700' : 'text-red-700'}`}>
+              {shortenAddress(signerAddress)}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-600">Contract Owner:</p>
+            <p className="font-mono text-sm text-gray-900">{shortenAddress(ownerAddress)}</p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-600">Connected Chain ID:</p>
+            <p className="font-mono text-sm text-gray-900">{connectedChainId || 'Unknown'}</p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-600">Configured Chain ID:</p>
+            <p className={`font-mono text-sm ${configuredChainId && connectedChainId && configuredChainId !== connectedChainId ? 'text-red-700' : 'text-gray-900'}`}>
+              {configuredChainId || 'Unknown'}
+            </p>
+          </div>
+        </div>
+
+        {!isOwner && ownerAddress && signerAddress && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+            This wallet is not the contract owner. Owner-only actions like starting an election will revert until MetaMask is switched to {ownerAddress}.
+          </div>
+        )}
         
         {currentStatus ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -391,14 +512,14 @@ export default function ElectionManagement() {
               <div className="space-y-2">
                 <button
                   onClick={handleStartRegistrationPhase}
-                  disabled={loading || currentStatus.phaseString === 'REGISTRATION'}
+                  disabled={loading || !isOwner || currentStatus.phaseString === 'REGISTRATION'}
                   className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition duration-200 text-sm"
                 >
                   {currentStatus.phaseString === 'REGISTRATION' ? '✓ Active' : 'Start Registration'}
                 </button>
                 <button
                   onClick={handleStopRegistrationPhase}
-                  disabled={loading || currentStatus.phaseString !== 'REGISTRATION'}
+                  disabled={loading || !isOwner || currentStatus.phaseString !== 'REGISTRATION'}
                   className="w-full bg-blue-800 hover:bg-blue-900 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition duration-200 text-sm"
                 >
                   Stop Registration
@@ -414,6 +535,7 @@ export default function ElectionManagement() {
                   onClick={handleStartVotingPhase}
                   disabled={
                     loading || 
+                    !isOwner ||
                     currentStatus.phaseString === 'VOTING' || 
                     currentStatus.phaseString === 'REGISTRATION' || 
                     currentStatus.registeredVoters === 0
@@ -425,7 +547,7 @@ export default function ElectionManagement() {
                 </button>
                 <button
                   onClick={handleStopVotingPhase}
-                  disabled={loading || currentStatus.phaseString !== 'VOTING'}
+                  disabled={loading || !isOwner || currentStatus.phaseString !== 'VOTING'}
                   className="w-full bg-green-800 hover:bg-green-900 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition duration-200 text-sm"
                 >
                   Stop Voting
@@ -447,6 +569,7 @@ export default function ElectionManagement() {
                   onClick={handleStartTallyingPhase}
                   disabled={
                     loading || 
+                    !isOwner ||
                     currentStatus.phaseString === 'TALLYING' || 
                     currentStatus.phaseString === 'VOTING' || 
                     currentStatus.phaseString === 'REGISTRATION'
@@ -458,7 +581,7 @@ export default function ElectionManagement() {
                 </button>
                 <button
                   onClick={handleStopTallyingPhase}
-                  disabled={loading || currentStatus.phaseString !== 'TALLYING'}
+                  disabled={loading || !isOwner || currentStatus.phaseString !== 'TALLYING'}
                   className="bg-purple-800 hover:bg-purple-900 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition duration-200 text-sm"
                 >
                   Stop Tallying
@@ -492,7 +615,7 @@ export default function ElectionManagement() {
           <div className="space-y-3">
             <button
               onClick={handleEndElection}
-              disabled={loading}
+              disabled={loading || !isOwner}
               className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition duration-200"
             >
               {loading ? 'Ending...' : 'End Election'}
@@ -566,7 +689,7 @@ export default function ElectionManagement() {
 
             <button
               onClick={handleStartElection}
-              disabled={loading || !newElection.electionId}
+              disabled={loading || !isOwner || !newElection.electionId}
               className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition duration-200"
             >
               {loading ? 'Starting...' : 'Start Election'}
@@ -588,7 +711,7 @@ export default function ElectionManagement() {
           
           <button
             onClick={handleResetElectionData}
-            disabled={loading}
+            disabled={loading || !isOwner}
             className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition duration-200"
           >
             {loading ? 'Resetting...' : 'Reset Election Data'}

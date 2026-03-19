@@ -1,7 +1,8 @@
 {
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^6.1.0",
-    "hardhat": "^2.26.1"
+    "hardhat": "^2.26.1",
+    "tailwindcss": "^4.2.2"
   },
   "dependencies": {
     "@noble/curves": "^1.9.7",

@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { VotingService, DEFAULT_CANDIDATES, type Candidate, type VoteData } from '@/lib/voting-service';
 import { BlockchainService } from '@/lib/blockchain-utils';
+import { getKeyPairsByType, type StoredKeyPair } from '@/lib/key-storage-service';
+import { decryptPrivateKey, verifyPassword } from '@/lib/key-encryption-service';
 
 export default function VotingInterface() {
   const [contractAddress, setContractAddress] = useState('');
@@ -140,6 +142,102 @@ export default function VotingInterface() {
       setLoading(false);
     }
   };
+
+    // Voting keys storage state
+    const [storedVotingKeys, setStoredVotingKeys] = useState<StoredKeyPair[]>([]);
+    const [selectedVotingKeyId, setSelectedVotingKeyId] = useState<string | null>(null);
+    const [showVotingKeyUnlockModal, setShowVotingKeyUnlockModal] = useState(false);
+    const [votingKeyUnlockPassword, setVotingKeyUnlockPassword] = useState('');
+    const [votingKeyUnlockError, setVotingKeyUnlockError] = useState('');
+    const [isUnlockingVotingKey, setIsUnlockingVotingKey] = useState(false);
+    const [votingKeyUnlocked, setVotingKeyUnlocked] = useState(false);
+    const votingKeyUnlockTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Load stored voting keys on mount
+    useEffect(() => {
+      loadStoredVotingKeys();
+    }, []);
+
+    // Auto-lock voting key after 10 minutes of inactivity
+    useEffect(() => {
+      if (votingKeyUnlocked) {
+        if (votingKeyUnlockTimeoutRef.current) {
+          clearTimeout(votingKeyUnlockTimeoutRef.current);
+        }
+        votingKeyUnlockTimeoutRef.current = setTimeout(() => {
+          lockVotingKey();
+        }, 10 * 60 * 1000);
+
+        return () => {
+          if (votingKeyUnlockTimeoutRef.current) {
+            clearTimeout(votingKeyUnlockTimeoutRef.current);
+          }
+        };
+      }
+    }, [votingKeyUnlocked]);
+
+    const loadStoredVotingKeys = async () => {
+      try {
+        const keys = await getKeyPairsByType('voting');
+        setStoredVotingKeys(keys);
+        if (keys.length > 0) {
+          setSelectedVotingKeyId(keys[0].id);
+        }
+      } catch (error) {
+        console.error('Failed to load stored voting keys:', error);
+      }
+    };
+
+    const handleUnlockVotingKey = async () => {
+      if (!selectedVotingKeyId || !votingKeyUnlockPassword) {
+        setVotingKeyUnlockError('Please select a key and enter password');
+        return;
+      }
+
+      const selectedKey = storedVotingKeys.find((k) => k.id === selectedVotingKeyId);
+      if (!selectedKey) {
+        setVotingKeyUnlockError('Selected key not found');
+        return;
+      }
+
+      setIsUnlockingVotingKey(true);
+      setVotingKeyUnlockError('');
+
+      try {
+        // Verify password
+        const isValid = await verifyPassword(selectedKey.encryptedPrivateKey, votingKeyUnlockPassword);
+        if (!isValid) {
+          setVotingKeyUnlockError('Incorrect password');
+          setIsUnlockingVotingKey(false);
+          return;
+        }
+
+        // Decrypt private key
+        const decryptedPrivateKey = await decryptPrivateKey(selectedKey.encryptedPrivateKey, votingKeyUnlockPassword);
+
+        // Set private key
+        setNewPrivateKey(decryptedPrivateKey);
+        setVotingKeyUnlocked(true);
+        setShowVotingKeyUnlockModal(false);
+        setVotingKeyUnlockPassword('');
+        setSuccess('Voting key unlocked successfully! Ready to cast vote.');
+      } catch (err) {
+        setVotingKeyUnlockError('Failed to decrypt key: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      } finally {
+        setIsUnlockingVotingKey(false);
+      }
+    };
+
+    const lockVotingKey = () => {
+      setNewPrivateKey('');
+      setVotingKeyUnlocked(false);
+      setVotingKeyUnlockPassword('');
+      setVotingKeyUnlockError('');
+      if (votingKeyUnlockTimeoutRef.current) {
+        clearTimeout(votingKeyUnlockTimeoutRef.current);
+        votingKeyUnlockTimeoutRef.current = null;
+      }
+    };
 
   const handleCheckVoteStatus = async () => {
     if (!votingService || !kv) {
@@ -301,8 +399,8 @@ export default function VotingInterface() {
         {/* Election Status Card */}
         {electionStatus && (
           <div className={`card p-6 mb-6 border-l-4 animate-fadeIn ${
-            electionStatus.currentPhase === 2 
-              ? 'border-green-500 bg-green-50' 
+            electionStatus.currentPhase === 2
+              ? 'border-green-500 bg-green-50'
               : 'border-yellow-500 bg-yellow-50'
           }`}>
             <div className="flex items-start justify-between mb-4">
@@ -476,18 +574,62 @@ export default function VotingInterface() {
                 )}
               </div>
 
-              {/* Private Key */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-3">New Private Key (P_rv')</label>
-                <input
-                  type="password"
-                  value={newPrivateKey}
-                  onChange={(e) => setNewPrivateKey(e.target.value.trim())}
-                  placeholder="0x... or 64 hex characters"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent font-mono"
-                  disabled={loading}
-                />
-                <p className="text-xs text-gray-600 mt-2">The private key from your LSAG registration (64 hexadecimal characters)</p>
+              {/* Stored Voting Key Unlock */}
+              <div className="space-y-3">
+                <label className="block text-sm font-semibold text-gray-900 mb-3">Voting Key (P_rv')</label>
+
+                {storedVotingKeys.length === 0 ? (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <p className="text-yellow-800 text-sm">
+                      No stored voting keys found. Generate LSAG and secure voting keys first.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <select
+                      value={selectedVotingKeyId || ''}
+                      onChange={(e) => {
+                        setSelectedVotingKeyId(e.target.value);
+                        if (votingKeyUnlocked) {
+                          lockVotingKey();
+                        }
+                      }}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white text-sm"
+                      disabled={loading}
+                    >
+                      {storedVotingKeys.map((key) => (
+                        <option key={key.id} value={key.id}>
+                          {key.label} - {new Date(key.createdAt).toLocaleDateString()}
+                        </option>
+                      ))}
+                    </select>
+
+                    {selectedVotingKeyId && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <p className="text-xs font-medium text-red-900 mb-2">Public Key</p>
+                        <p className="text-xs font-mono text-red-800 bg-white p-2 rounded break-all mb-3">
+                          {storedVotingKeys.find((k) => k.id === selectedVotingKeyId)?.publicKey}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <span className={`text-sm font-semibold ${votingKeyUnlocked ? 'text-green-700' : 'text-yellow-700'}`}>
+                            {votingKeyUnlocked ? '🔓 Unlocked' : '🔒 Locked'}
+                          </span>
+                          <button
+                            onClick={() => (votingKeyUnlocked ? lockVotingKey() : setShowVotingKeyUnlockModal(true))}
+                            className={`text-xs font-semibold px-4 py-2 rounded ${
+                              votingKeyUnlocked
+                                ? 'bg-red-600 hover:bg-red-700 text-white'
+                                : 'bg-green-600 hover:bg-green-700 text-white'
+                            }`}
+                          >
+                            {votingKeyUnlocked ? 'Lock Key' : 'Unlock Key'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+                <p className="text-xs text-gray-600">Unlock with your password to load the private key securely from encrypted storage.</p>
               </div>
 
               {/* Candidate Selection */}
@@ -514,7 +656,7 @@ export default function VotingInterface() {
               {/* Submit Button */}
               <button
                 onClick={handleGenerateVote}
-                disabled={loading || !newPrivateKey || !kv || hasVoted === true}
+                disabled={loading || !votingKeyUnlocked || !newPrivateKey || !kv || hasVoted === true}
                 className="w-full bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 disabled:from-gray-400 disabled:to-gray-400 text-white font-semibold py-4 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 hover:shadow-lg disabled:cursor-not-allowed"
               >
                 {loading ? (
@@ -523,6 +665,13 @@ export default function VotingInterface() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                     Generating Vote...
+                  </>
+                ) : !votingKeyUnlocked ? (
+                  <>
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                    </svg>
+                    Unlock Voting Key First
                   </>
                 ) : (
                   <>
@@ -640,6 +789,89 @@ export default function VotingInterface() {
           </div>
         )}
       </div>
+
+      {/* Voting Key Unlock Modal */}
+      {showVotingKeyUnlockModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6 space-y-4 animate-fadeIn">
+              <div className="flex items-center gap-3 mb-4">
+                <svg className="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                </svg>
+                <h3 className="text-lg font-semibold text-gray-900">Unlock Your Voting Key</h3>
+              </div>
+
+              <p className="text-sm text-gray-600">
+                Enter the password you created when securing your voting keys to unlock them for voting.
+              </p>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Encryption Password</label>
+                <input
+                  type="password"
+                  value={votingKeyUnlockPassword}
+                  onChange={(e) => {
+                    setVotingKeyUnlockPassword(e.target.value);
+                    setVotingKeyUnlockError('');
+                  }}
+                  placeholder="Enter your password"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleUnlockVotingKey();
+                    }
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                />
+              </div>
+
+              {votingKeyUnlockError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                  <p className="text-sm text-red-800 flex items-center gap-2">
+                    <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    {votingKeyUnlockError}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => {
+                    setShowVotingKeyUnlockModal(false);
+                    setVotingKeyUnlockPassword('');
+                    setVotingKeyUnlockError('');
+                  }}
+                  disabled={isUnlockingVotingKey}
+                  className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-900 font-semibold rounded-lg transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUnlockVotingKey}
+                  disabled={isUnlockingVotingKey || !votingKeyUnlockPassword}
+                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:cursor-not-allowed"
+                >
+                  {isUnlockingVotingKey ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Unlocking...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" />
+                      </svg>
+                      Unlock
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+      )}
     </div>
   );
 }

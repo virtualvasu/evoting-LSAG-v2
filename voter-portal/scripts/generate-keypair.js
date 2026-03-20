@@ -1,22 +1,26 @@
-const { secp256k1 } = require('@noble/curves/secp256k1');
+const { secp256k1 } = require('@noble/curves/secp256k1.js');
 
 console.log("Generating new secp256k1 key pair...\n");
 
-// Generate random private key
-const privateKeyBytes = secp256k1.utils.randomPrivateKey();
-const privateKey = BigInt('0x' + Buffer.from(privateKeyBytes).toString('hex'));
+const privateKeyBytes = secp256k1.utils.randomSecretKey();
+const privateKeyHex = Buffer.from(privateKeyBytes).toString('hex');
+const uncompressed = secp256k1.getPublicKey(privateKeyBytes, false);
 
-// Derive public key
-const publicKeyPoint = secp256k1.ProjectivePoint.BASE.multiply(privateKey).toAffine();
+if (uncompressed.length !== 65 || uncompressed[0] !== 0x04) {
+	throw new Error('Invalid uncompressed public key encoding');
+}
 
-// Format as 64-byte uncompressed public key (32 bytes X + 32 bytes Y)
-const publicKeyX = publicKeyPoint.x.toString(16).padStart(64, '0');
-const publicKeyY = publicKeyPoint.y.toString(16).padStart(64, '0');
+const publicKeyX = Buffer.from(uncompressed.slice(1, 33)).toString('hex');
+const publicKeyY = Buffer.from(uncompressed.slice(33, 65)).toString('hex');
 const publicKey = publicKeyX + publicKeyY;
+
+if (publicKeyX.length !== 64 || publicKeyY.length !== 64 || publicKey.length !== 128) {
+	throw new Error('Generated public key has invalid length');
+}
 
 console.log("✅ New Key Pair Generated:\n");
 console.log("Private Key:");
-console.log("  0x" + privateKey.toString(16));
+console.log("  0x" + privateKeyHex);
 console.log();
 console.log("Public Key (64 bytes, uncompressed):");
 console.log("  0x" + publicKey);
@@ -34,6 +38,6 @@ console.log("2. Public Key: for registration in the voter ring");
 console.log("─".repeat(70));
 
 // Verify the pair
-const verifyPub = secp256k1.ProjectivePoint.BASE.multiply(privateKey).toAffine();
-const match = verifyPub.x === publicKeyPoint.x && verifyPub.y === publicKeyPoint.y;
+const verifyPub = secp256k1.getPublicKey(privateKeyBytes, false);
+const match = Buffer.from(verifyPub.slice(1)).toString('hex') === publicKey;
 console.log("\n✓ Verification:", match ? "PASSED" : "FAILED");

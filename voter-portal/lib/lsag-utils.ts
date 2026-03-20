@@ -17,6 +17,10 @@ export interface LSAGSignatureResult {
   };
 }
 
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
 /**
  * Convert BigInt to 32-byte buffer (big-endian)
  */
@@ -36,8 +40,8 @@ function hashToPoint(Px: bigint, Py: bigint): { x: bigint; y: bigint } {
   const concatenated = new Uint8Array([...pxBuffer, ...pyBuffer]);
   const hash = keccak_256(concatenated);
   
-  const scalar = BigInt('0x' + Buffer.from(hash).toString('hex')) % secp256k1.CURVE.n;
-  const point = secp256k1.ProjectivePoint.BASE.multiply(scalar);
+  const scalar = BigInt('0x' + Buffer.from(hash).toString('hex')) % secp256k1.Point.CURVE().n;
+  const point = secp256k1.Point.BASE.multiply(scalar);
   
   return point.toAffine();
 }
@@ -74,16 +78,16 @@ function generateSimpleLSAG(
   ring: Array<{ x: bigint; y: bigint }>,
   signerIndex: number
 ): { keyImageX: bigint; keyImageY: bigint; c0: bigint; s: bigint[] } {
-  const n = secp256k1.CURVE.n;
-  const G = secp256k1.ProjectivePoint.BASE;
+  const n = secp256k1.Point.CURVE().n;
+  const G = secp256k1.Point.BASE;
   const ringSize = ring.length;
   
   // Step 1: Compute key image I = privateKey * H(publicKey)
   const H_Pk = hashToPoint(publicKey.x, publicKey.y);
-  const keyImage = secp256k1.ProjectivePoint.fromAffine(H_Pk).multiply(privateKey).toAffine();
+  const keyImage = secp256k1.Point.fromAffine(H_Pk).multiply(privateKey).toAffine();
   
   // Step 2: Generate random alpha
-  const alphaBytes = secp256k1.utils.randomPrivateKey();
+  const alphaBytes = secp256k1.utils.randomSecretKey();
   const alpha = BigInt('0x' + Buffer.from(alphaBytes).toString('hex'));
   
   // Step 3: Initialize response array
@@ -92,7 +96,7 @@ function generateSimpleLSAG(
   // Step 4: Compute alpha-based L and R at signer position
   const L_alpha = G.multiply(alpha).toAffine();
   const H_Pk_signer = hashToPoint(ring[signerIndex].x, ring[signerIndex].y);
-  const R_alpha = secp256k1.ProjectivePoint.fromAffine(H_Pk_signer).multiply(alpha).toAffine();
+  const R_alpha = secp256k1.Point.fromAffine(H_Pk_signer).multiply(alpha).toAffine();
   
   // Step 5: Compute first challenge at position AFTER signer
   const startPos = (signerIndex + 1) % ringSize;
@@ -108,23 +112,23 @@ function generateSimpleLSAG(
     const i = (startPos + j) % ringSize;
     
     // Generate random response for this position
-    const sBytes = secp256k1.utils.randomPrivateKey();
+    const sBytes = secp256k1.utils.randomSecretKey();
     s[i] = BigInt('0x' + Buffer.from(sBytes).toString('hex')) % n;
     
     // Compute L = s[i]*G + c[i]*P[i]
     const sG = G.multiply(s[i]).toAffine();
-    const cP = secp256k1.ProjectivePoint.fromAffine({x: ring[i].x, y: ring[i].y})
+    const cP = secp256k1.Point.fromAffine({x: ring[i].x, y: ring[i].y})
       .multiply(currentChallenge).toAffine();
-    const L = secp256k1.ProjectivePoint.fromAffine(sG)
-      .add(secp256k1.ProjectivePoint.fromAffine(cP)).toAffine();
+    const L = secp256k1.Point.fromAffine(sG)
+      .add(secp256k1.Point.fromAffine(cP)).toAffine();
     
     // Compute R = s[i]*H(P[i]) + c[i]*I
     const H_Pi = hashToPoint(ring[i].x, ring[i].y);
-    const sH = secp256k1.ProjectivePoint.fromAffine(H_Pi).multiply(s[i]).toAffine();
-    const cI = secp256k1.ProjectivePoint.fromAffine(keyImage)
+    const sH = secp256k1.Point.fromAffine(H_Pi).multiply(s[i]).toAffine();
+    const cI = secp256k1.Point.fromAffine(keyImage)
       .multiply(currentChallenge).toAffine();
-    const R = secp256k1.ProjectivePoint.fromAffine(sH)
-      .add(secp256k1.ProjectivePoint.fromAffine(cI)).toAffine();
+    const R = secp256k1.Point.fromAffine(sH)
+      .add(secp256k1.Point.fromAffine(cI)).toAffine();
     
     // Compute next challenge
     currentChallenge = computeChallenge(electionId, L.x, L.y, R.x, R.y);
@@ -151,16 +155,23 @@ function generateSimpleLSAG(
  * Generate new key pair for voter
  */
 function generateNewKeyPair(): { privateKey: string; publicKey: string } {
-  const privateKeyBytes = secp256k1.utils.randomPrivateKey();
-  const privateKey = BigInt('0x' + Buffer.from(privateKeyBytes).toString('hex'));
-  
-  const publicKeyPoint = secp256k1.ProjectivePoint.BASE.multiply(privateKey).toAffine();
-  const publicKeyX = publicKeyPoint.x.toString(16).padStart(64, '0');
-  const publicKeyY = publicKeyPoint.y.toString(16).padStart(64, '0');
+  const privateKeyBytes = secp256k1.utils.randomSecretKey();
+  const uncompressed = secp256k1.getPublicKey(privateKeyBytes, false);
+
+  if (uncompressed.length !== 65 || uncompressed[0] !== 0x04) {
+    throw new Error('Invalid uncompressed public key encoding');
+  }
+
+  const publicKeyX = bytesToHex(uncompressed.slice(1, 33));
+  const publicKeyY = bytesToHex(uncompressed.slice(33, 65));
   const publicKey = publicKeyX + publicKeyY;
+
+  if (publicKey.length !== 128) {
+    throw new Error('Generated public key has invalid length');
+  }
   
   return {
-    privateKey: '0x' + privateKey.toString(16),
+    privateKey: '0x' + bytesToHex(privateKeyBytes),
     publicKey: '0x' + publicKey
   };
 }

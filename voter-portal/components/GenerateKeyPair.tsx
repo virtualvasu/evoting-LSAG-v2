@@ -102,7 +102,7 @@ export default function GenerateKeyPair() {
               {/* Public Key */}
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-semibold text-green-900">Public Key (64 bytes, uncompressed)</h3>
+                  <h3 className="text-sm font-semibold text-green-900">Public Key (64 bytes, government-ready)</h3>
                   <button
                     onClick={() => handleCopy(keyPair.publicKey, 'public')}
                     className="text-xs bg-green-600 hover:bg-green-700 text-black px-3 py-1 rounded"
@@ -113,6 +113,7 @@ export default function GenerateKeyPair() {
                 <p className="text-xs font-mono break-all text-green-800 bg-white p-2 rounded">
                   {keyPair.publicKey}
                 </p>
+                <p className="text-xs text-green-700 mt-2">Use this value exactly as-is in Government Portal. Do not add an extra 04 prefix.</p>
               </div>
 
               {/* Public Key X */}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
+import fs from 'fs';
 import { PreRegistrationService } from '@/lib/pre-registration-service';
 
 /**
@@ -44,9 +45,23 @@ export async function POST(request: NextRequest) {
     }
 
     // ============ CONFIGURATION PATHS ============
-    // Get the project root (parent of government-frontend)
     const projectRoot = path.join(process.cwd(), '..');
-    const govConfigPath = path.join(projectRoot, 'scripts/config/government-config.json');
+    const candidatePaths = [
+      path.join(projectRoot, 'scripts/config/government-config.json'),
+      path.join(projectRoot, 'blockchain/config/government-config.json'),
+      path.join(projectRoot, 'blockchain/config/config/government-config.json')
+    ];
+
+    const govConfigPath = candidatePaths.find((candidate) => fs.existsSync(candidate));
+
+    if (!govConfigPath) {
+      return NextResponse.json(
+        {
+          error: `Government configuration not found. Checked: ${candidatePaths.join(', ')}`,
+        },
+        { status: 500 }
+      );
+    }
 
     // ============ PRE-REGISTRATION EXECUTION ============
     // Use service to execute complete pre-registration flow (in-memory only)

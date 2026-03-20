@@ -335,7 +335,7 @@ export default function GenerateLSAGSignature() {
             <div className="flex gap-4">
               <button
                 onClick={handleDownloadResult}
-                className="flex-1 bg-gray-800 hover:bg-gray-900 text-black font-semibold py-3 px-6 rounded-lg transition-colors"
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-900 font-semibold py-3 px-6 rounded-lg border border-slate-300 transition-colors"
               >
                 Download Signature as JSON
               </button>

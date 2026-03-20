@@ -488,12 +488,12 @@ export default function SubmitLSAGRegistration() {
             <div className="flex gap-4">
               <button
                 onClick={handleSubmit}
-                disabled={isProcessing || (electionStatus && electionStatus.currentPhase !== 1)}
+                disabled={isProcessing || (electionStatus ? electionStatus.currentPhase !== 1 : false)}
                 className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-black font-semibold py-3 px-6 rounded-lg transition-colors"
               >
                 {isProcessing ? 'Submitting to Blockchain...' : 
-                 (electionStatus && electionStatus.currentPhase !== 1) ? 
-                 `Cannot Submit - Phase: ${electionStatus.phaseString}` : 
+                 (electionStatus ? electionStatus.currentPhase !== 1 : false) ? 
+                  `Cannot Submit - Phase: ${electionStatus?.phaseString ?? 'Unknown'}` : 
                  'Submit Registration'}
               </button>
               <button
@@ -573,7 +573,7 @@ export default function SubmitLSAGRegistration() {
             <div className="flex gap-4">
               <button
                 onClick={handleDownloadResult}
-                className="flex-1 bg-gray-800 hover:bg-gray-900 text-black font-semibold py-3 px-6 rounded-lg transition-colors"
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-900 font-semibold py-3 px-6 rounded-lg border border-slate-300 transition-colors"
               >
                 Download Registration Result
               </button>

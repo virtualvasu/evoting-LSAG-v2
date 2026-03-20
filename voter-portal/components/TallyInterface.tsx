@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TallyService, DEFAULT_CANDIDATES, type Candidate, type VoteReveal, type ElectionResults } from '@/lib/tally-service';
 import { BlockchainService } from '@/lib/blockchain-utils';
 
@@ -11,6 +11,8 @@ export default function TallyInterface() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [info, setInfo] = useState('');
+  const infoAlertRef = useRef<HTMLDivElement | null>(null);
 
   // Tally inputs
   const [kv, setKv] = useState<string>('');
@@ -25,7 +27,7 @@ export default function TallyInterface() {
   const [showResults, setShowResults] = useState(false);
 
   // Available candidates for current election
-  const [availableCandidates, setAvailableCandidates] = useState<string[]>(DEFAULT_CANDIDATES);
+  const [availableCandidates, setAvailableCandidates] = useState<string[]>([...DEFAULT_CANDIDATES]);
 
   // Verification
   const [verification, setVerification] = useState<{
@@ -53,6 +55,12 @@ export default function TallyInterface() {
   useEffect(() => {
     loadContractConfig();
   }, []);
+
+  useEffect(() => {
+    if (info && infoAlertRef.current) {
+      infoAlertRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [info]);
 
   const loadContractConfig = async () => {
     try {
@@ -296,6 +304,9 @@ export default function TallyInterface() {
       return;
     }
 
+    setInfo('');
+    setSuccess('');
+
     // Initialize contract for read-only if not connected
     if (!connected) {
       try {
@@ -307,6 +318,16 @@ export default function TallyInterface() {
       }
     }
 
+    if (electionStatus && !electionStatus.isActive) {
+      setError('');
+      setShowResults(false);
+      setResults(null);
+      setInfo(
+        'No active election right now. Results are unavailable until a new election is initialized and tallying is started.'
+      );
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -316,382 +337,419 @@ export default function TallyInterface() {
       setShowResults(true);
       setSuccess('Results fetched successfully!');
     } catch (err: any) {
-      setError(err.message);
+      const errorMessage = err?.message || 'Failed to fetch results';
+      const noResultsAvailable =
+        errorMessage.includes('No election results available') ||
+        errorMessage.includes('Election may not be initialized');
+
+      if (noResultsAvailable) {
+        setError('');
+        setShowResults(false);
+        setResults(null);
+        setInfo(
+          'No election results available yet. This usually means no election is currently active or tallying has not started.'
+        );
+      } else {
+        setInfo('');
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="bg-white rounded-lg shadow-lg p-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">
-          📊 Tally Votes
-        </h1>
-        <p className="text-gray-600 mb-6">
-          Reveal your vote and contribute to the final tally
-        </p>
-
-        {/* Contract Info */}
-        {contractAddress && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <p className="text-sm text-gray-600">
-              <strong>Contract Address:</strong>
-            </p>
-            <p className="text-xs font-mono text-gray-800 break-all">
-              {contractAddress}
-            </p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-purple-100">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">View Election Results</h1>
+              <p className="text-gray-600 mt-1">Phase 4: Reveal your vote and verify results</p>
+            </div>
           </div>
-        )}
+        </div>
 
-        {/* Election Phase Status */}
+        {/* Election Status */}
         {electionStatus && (
-          <div className={`p-4 rounded-lg border-l-4 mb-6 ${
+          <div className={`card p-6 mb-6 border-l-4 animate-fadeIn ${
             electionStatus.currentPhase === 3 
-              ? 'bg-green-50 border-green-500' 
-              : 'bg-yellow-50 border-yellow-500'
+              ? 'border-indigo-500 bg-indigo-50' 
+              : 'border-yellow-500 bg-yellow-50'
           }`}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-gray-800">Election Phase Status</h3>
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+                  </svg>
+                  Election Status
+                </h2>
+              </div>
               <button
                 onClick={() => checkElectionPhase()}
                 disabled={isCheckingPhase}
-                className="text-xs bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white px-3 py-1 rounded"
+                className="text-xs font-semibold px-4 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
               >
-                {isCheckingPhase ? 'Checking...' : 'Refresh'}
+                {isCheckingPhase ? 'Checking...' : '↻ Refresh'}
               </button>
             </div>
-            <div className="space-y-2 text-sm">
-              <div>
-                <span className="font-medium text-gray-700">Election ID:</span>{' '}
-                <span className="text-gray-900">{electionStatus.electionId || 'None'}</span>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white p-3 rounded-lg border border-gray-200">
+                <p className="text-xs font-medium text-gray-600 mb-1">Election ID</p>
+                <p className="text-sm font-mono font-semibold text-gray-900">{electionStatus.electionId || '—'}</p>
               </div>
-              <div>
-                <span className="font-medium text-gray-700">Election Active:</span>{' '}
-                <span className={electionStatus.isActive ? 'text-green-700 font-semibold' : 'text-red-700 font-semibold'}>
-                  {electionStatus.isActive ? 'Yes' : 'No'}
-                </span>
+              <div className="bg-white p-3 rounded-lg border border-gray-200">
+                <p className="text-xs font-medium text-gray-600 mb-1">Current Phase</p>
+                <p className="text-sm font-semibold text-gray-900">{electionStatus.phaseString}</p>
               </div>
-              <div>
-                <span className="font-medium text-gray-700">Current Phase:</span>{' '}
-                <span className={`font-semibold ${
-                  electionStatus.currentPhase === 3 ? 'text-green-700' : 'text-yellow-700'
-                }`}>
-                  {electionStatus.phaseString}
-                </span>
+              <div className="bg-white p-3 rounded-lg border border-gray-200">
+                <p className="text-xs font-medium text-gray-600 mb-1">Election Active</p>
+                <p className={`text-sm font-semibold ${electionStatus.isActive ? 'text-green-700' : 'text-red-700'}`}>
+                  {electionStatus.isActive ? '✓ Yes' : '✗ No'}
+                </p>
               </div>
-              <div>
-                <span className="font-medium text-gray-700">Registered Voters:</span>{' '}
-                <span className="text-gray-900">{electionStatus.registeredVoters}</span>
+              <div className="bg-white p-3 rounded-lg border border-gray-200">
+                <p className="text-xs font-medium text-gray-600 mb-1">Registered Voters</p>
+                <p className="text-sm font-semibold text-gray-900">{electionStatus.registeredVoters}</p>
               </div>
-              {electionStatus.currentPhase === 3 && (
-                <div className="mt-2 p-2 bg-green-100 rounded text-green-800 font-medium">
-                  ✓ Tallying is ACTIVE - You can tally votes now
-                </div>
-              )}
-              {electionStatus.currentPhase !== 3 && (
-                <div className="mt-2 p-2 bg-yellow-100 rounded text-yellow-800 font-medium">
-                  ⚠ Tallying is NOT ACTIVE - Wait for government to start tallying phase
-                </div>
-              )}
             </div>
+
+            {electionStatus.currentPhase === 3 && (
+              <div className="mt-4 p-3 bg-indigo-100 border border-indigo-400 rounded-lg flex items-center gap-2">
+                <svg className="w-5 h-5 text-indigo-700 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span className="font-semibold text-indigo-900">Tallying is active - You can submit your vote tally now!</span>
+              </div>
+            )}
+            {electionStatus.currentPhase !== 3 && (
+              <div className="mt-4 p-3 bg-yellow-100 border border-yellow-400 rounded-lg flex items-center gap-2">
+                <svg className="w-5 h-5 text-yellow-700 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <span className="font-semibold text-yellow-900">Tallying phase not active yet. Wait for the government authority to start it.</span>
+              </div>
+            )}
           </div>
         )}
 
         {/* Wallet Connection */}
-        <div className="mb-6">
-          {!connected ? (
-            <button
-              onClick={handleConnect}
-              disabled={loading}
-              className="w-full bg-blue-600 text-black py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold"
-            >
-              {loading ? 'Connecting...' : '🔐 Connect Wallet'}
-            </button>
-          ) : (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <p className="text-sm text-gray-600">
-                <strong>Connected Wallet:</strong>
-              </p>
-              <p className="text-xs font-mono text-gray-800 break-all">
-                {walletAddress}
-              </p>
+        {!connected ? (
+          <div className="card p-6 border-2 border-dashed border-indigo-300 mb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-gray-900">Connect Your Wallet</h3>
+                <p className="text-sm text-gray-600 mt-1">MetaMask is required to submit your vote tally</p>
+              </div>
+              <button
+                onClick={handleConnect}
+                disabled={loading}
+                className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-400 text-white font-semibold rounded-lg transition-all duration-300 hover:shadow-lg disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M18 9a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Connect Wallet
+                  </>
+                )}
+              </button>
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="card p-4 mb-6 bg-indigo-50 border-l-4 border-indigo-500">
+            <div className="flex items-center gap-3">
+              <svg className="w-5 h-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-indigo-900">Wallet Connected</p>
+                <p className="text-xs font-mono text-indigo-800 mt-1">{walletAddress}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
-        {/* Error Display */}
+        {/* Alerts */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-red-800 text-sm whitespace-pre-wrap">{error}</p>
+          <div className="alert alert-error mb-6">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <p className="font-semibold">Error</p>
+              <p className="text-sm whitespace-pre-wrap">{error}</p>
+            </div>
           </div>
         )}
 
-        {/* Success Display */}
         {success && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-            <p className="text-green-800 text-sm whitespace-pre-wrap">{success}</p>
+          <div className="alert alert-success mb-6">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <p className="font-semibold">Success</p>
+              <p className="text-sm whitespace-pre-wrap">{success}</p>
+            </div>
           </div>
         )}
 
-        {/* File Upload */}
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">
-            Step 1: Load Vote File (Optional)
-          </h2>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-            <input
-              type="file"
-              accept=".json"
-              onChange={handleFileUpload}
-              className="hidden"
-              id="vote-file-upload"
-            />
-            <label
-              htmlFor="vote-file-upload"
-              className="cursor-pointer inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              📁 Choose Vote File
-            </label>
-            {voteFile && (
-              <p className="mt-2 text-sm text-gray-600">
-                ✅ Loaded: {voteFile.name}
-              </p>
-            )}
-            <p className="mt-2 text-xs text-gray-500">
-              Upload the vote_*.json file from when you cast your vote
-            </p>
+        {info && (
+          <div ref={infoAlertRef} className="alert alert-info mb-6">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10A8 8 0 112 10a8 8 0 0116 0zm-8-4a1 1 0 100 2 1 1 0 000-2zm-1 4a1 1 0 000 2h1v2a1 1 0 102 0v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <p className="font-semibold">Info</p>
+              <p className="text-sm whitespace-pre-wrap">{info}</p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Tally Form */}
-        <div className="space-y-4 mb-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">
-            Step 2: Reveal Vote Data
-          </h2>
+        <div className="card p-8 mb-6 animate-fadeIn">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="phase-number" style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)' }}>4</div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Submit Your Vote Tally</h2>
+              <p className="text-gray-600 mt-1">Reveal your vote and contribute to the election results</p>
+            </div>
+          </div>
 
-          {/* Available Candidates Info */}
-          {availableCandidates.length > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-gray-600 mb-2">
-                <strong>Valid Candidates for This Election:</strong>
-              </p>
-              <div className="flex flex-wrap gap-2">
+          <div className="space-y-6">
+            {/* File Upload */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-3">Load Vote File (Optional)</label>
+              <div className="border-2 border-dashed border-indigo-300 rounded-lg p-8 text-center hover:border-indigo-400 transition-colors">
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  id="vote-file"
+                />
+                <label htmlFor="vote-file" className="cursor-pointer block">
+                  <svg className="w-12 h-12 text-indigo-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 16v-4m0 0l-3 3m3-3l3 3M12 8v4m0-12a10 10 0 100 20 10 10 0 000-20z" />
+                  </svg>
+                  <p className="font-semibold text-indigo-700">{voteFile ? voteFile.name : 'Upload vote file'}</p>
+                  <p className="text-sm text-gray-600">Drag and drop or click to select</p>
+                </label>
+              </div>
+            </div>
+
+            {/* Registration Index */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-3">Registration Index (k_v)</label>
+              <input
+                type="number"
+                value={kv}
+                onChange={(e) => setKv(e.target.value)}
+                placeholder="Enter your registration index"
+                className=" w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                disabled={loading}
+              />
+              <p className="text-xs text-gray-600 mt-2">The index from your LSAG registration</p>
+            </div>
+
+            {/* Candidate Choice */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-3">Your Vote Choice</label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {availableCandidates.map((candidate) => (
-                  <span
+                  <button
                     key={candidate}
-                    className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                    onClick={() => setCandidateChoice(candidate)}
+                    className={`py-3 px-4 rounded-lg font-semibold transition-all duration-300 border-2 ${
                       candidateChoice === candidate
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-blue-200 text-blue-800'
+                        ? 'border-indigo-600 bg-indigo-100 text-indigo-900'
+                        : 'border-gray-300 bg-gray-50 text-gray-700 hover:border-gray-400'
                     }`}
+                    disabled={loading}
                   >
                     {candidate}
-                  </span>
+                  </button>
                 ))}
               </div>
             </div>
-          )}
 
-          {/* Registration Index */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Registration Index (k_v)
-            </label>
-            <input
-              type="number"
-              value={kv}
-              onChange={(e) => setKv(e.target.value)}
-              placeholder="Enter your registration index (e.g., 0)"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              disabled={loading}
-            />
-          </div>
-
-          {/* Candidate Choice */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Candidate Choice (c)
-            </label>
-            {availableCandidates.length > 0 ? (
-              <select
-                value={candidateChoice}
-                onChange={(e) => setCandidateChoice(e.target.value as Candidate)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            {/* Random Number */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-3">Random Number (r)</label>
+              <input
+                type="password"
+                value={r}
+                onChange={(e) => setR(e.target.value.trim())}
+                placeholder="0x... or 64 hex characters"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono"
                 disabled={loading}
-              >
-                {availableCandidates.map((candidate) => (
-                  <option key={candidate} value={candidate}>
-                    {candidate}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <select
-                value={candidateChoice}
-                onChange={(e) => setCandidateChoice(e.target.value as Candidate)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                disabled={loading}
-              >
-                {availableCandidates.map((candidate) => (
-                  <option key={candidate} value={candidate}>
-                    {candidate}
-                  </option>
-                ))}
-              </select>
-            )}
-            <p className="text-xs text-gray-500 mt-1">
-              Select the candidate you voted for
-            </p>
-          </div>
+              />
+              <p className="text-xs text-gray-600 mt-2">The random number (r) from your vote</p>
+            </div>
 
-          {/* Random Number */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Random Number (r)
-            </label>
-            <input
-              type="text"
-              value={r}
-              onChange={(e) => setR(e.target.value)}
-              placeholder="0x..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-              disabled={loading}
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              The random number generated when you cast your vote
-            </p>
+            {/* Verify Button */}
+            <button
+              onClick={handleVerify}
+              disabled={loading || !kv || !candidateChoice || !r || !connected}
+              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-400 text-white font-semibold py-4 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 hover:shadow-lg disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <>
+                  <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Verifying Vote...
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  Verify Vote Integrity
+                </>
+              )}
+            </button>
           </div>
-
-          {/* Verify Button */}
-          <button
-            onClick={handleVerify}
-            disabled={loading || !connected || !kv || !r}
-            className="w-full bg-purple-600 text-black py-3 px-4 rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold"
-          >
-            {loading ? 'Verifying...' : '🔍 Verify Vote Integrity'}
-          </button>
         </div>
 
         {/* Verification Result */}
         {verification && (
-          <div className={`mb-6 p-4 rounded-lg border ${
+          <div className={`card p-6 mb-6 border-l-4 animate-fadeIn ${
             verification.valid 
-              ? 'bg-green-50 border-green-200' 
-              : 'bg-red-50 border-red-200'
+              ? 'border-green-500 bg-green-50' 
+              : 'border-red-500 bg-red-50'
           }`}>
-            <h3 className="font-semibold mb-2">
-              {verification.valid ? '✅ Verification Passed' : '❌ Verification Failed'}
-            </h3>
-            <div className="text-sm space-y-1">
-              <p className={verification.valid ? 'text-green-800' : 'text-red-800'}>
-                {verification.message}
-              </p>
-              <details className="mt-2">
-                <summary className="cursor-pointer font-medium">Hash Details</summary>
-                <div className="mt-2 font-mono text-xs space-y-1">
-                  <div>
-                    <span className="text-gray-600">Stored:</span>
-                    <p className="break-all">{verification.storedHash}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Calculated:</span>
-                    <p className="break-all">{verification.calculatedHash}</p>
-                  </div>
-                </div>
-              </details>
+            <div className="flex items-start gap-3 mb-4">
+              {verification.valid ? (
+                <svg className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              ) : (
+                <svg className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              )}
+              <div className="flex-1">
+                <h3 className={`font-semibold ${verification.valid ? 'text-green-900' : 'text-red-900'}`}>
+                  {verification.valid ? 'Vote Verified Successfully' : 'Vote Verification Failed'}
+                </h3>
+                {verification.message && (
+                  <p className={`text-sm mt-1 ${verification.valid ? 'text-green-800' : 'text-red-800'}`}>
+                    {verification.message}
+                  </p>
+                )}
+              </div>
             </div>
+
+            {verification.valid && (
+              <button
+                onClick={handleTally}
+                disabled={loading || !connected || (electionStatus ? electionStatus.currentPhase !== 3 : false)}
+                className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Tallying...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+                    </svg>
+                    Submit Tally to Blockchain
+                  </>
+                )}
+              </button>
+            )}
           </div>
         )}
-
-        {/* Tally Button */}
-        {verification?.valid && (
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">
-              Step 3: Submit to Tally
-            </h2>
-            <button
-              onClick={handleTally}
-              disabled={loading || !connected || (electionStatus && electionStatus.currentPhase !== 3)}
-              className="w-full bg-green-600 text-black py-3 px-4 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold text-lg"
-            >
-              {loading ? 'Tallying...' : 
-               (electionStatus && electionStatus.currentPhase !== 3) ? 
-               `Cannot Tally - Phase: ${electionStatus.phaseString}` : 
-               '📊 Tally Vote on Blockchain'}
-            </button>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
-              <p className="text-yellow-800 text-sm">
-                <strong>⚠️ Important:</strong> This will reveal your vote choice on the blockchain.
-                Only proceed during the official tally phase.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* View Results */}
-        <div className="border-t pt-6">
-          <button
-            onClick={handleGetResults}
-            disabled={loading}
-            className="w-full bg-indigo-600 text-black py-3 px-4 rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 transition-colors font-semibold"
-          >
-            {loading ? 'Loading...' : '📈 View Current Results'}
-          </button>
-        </div>
 
         {/* Results Display */}
         {showResults && results && (
-          <div className="mt-6 bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              🏆 Election Results
+          <div className="card p-8 bg-gradient-to-br from-indigo-50 to-purple-50 border-l-4 border-indigo-500 animate-fadeIn">
+            <h2 className="text-3xl font-bold text-gray-900 mb-8 flex items-center gap-2">
+              <svg className="w-8 h-8 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+              </svg>
+              Election Results
             </h2>
-            <div className="space-y-3">
+
+            <div className="space-y-4 mb-8">
               {Object.keys(results).filter(key => key !== 'total').map((candidate) => {
                 const count = parseInt(results[candidate]);
                 const total = parseInt(results.total);
                 const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
                 
                 return (
-                  <div key={candidate} className="bg-white rounded-lg p-4 shadow">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-bold text-lg">{candidate}</span>
-                      <span className="text-2xl font-bold text-indigo-600">{count}</span>
+                  <div key={candidate} className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="font-bold text-lg text-gray-900">{candidate}</span>
+                      <span className="text-3xl font-bold text-indigo-600">{count}</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
                       <div
-                        className="bg-gradient-to-r from-indigo-500 to-purple-500 h-3 rounded-full transition-all duration-500"
+                        className="bg-gradient-to-r from-indigo-500 to-purple-500 h-4 rounded-full transition-all duration-500"
                         style={{ width: `${percentage}%` }}
                       ></div>
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">{percentage}% of total votes</p>
+                    <p className="text-sm text-gray-600 mt-3 font-semibold">{percentage}% of total votes</p>
                   </div>
                 );
               })}
-              <div className="border-t-2 border-gray-300 pt-4 mt-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-bold text-gray-700">Total Votes:</span>
-                  <span className="text-3xl font-bold text-indigo-600">{results.total}</span>
-                </div>
+            </div>
+
+            <div className="bg-white border-2 border-indigo-300 rounded-lg p-6">
+              <div className="flex justify-between items-center">
+                <span className="text-xl font-bold text-gray-900">Total Votes Cast:</span>
+                <span className="text-4xl font-bold text-indigo-600">{results.total}</span>
               </div>
             </div>
           </div>
         )}
 
-        {/* Instructions */}
-        <div className="mt-8 bg-gray-50 border border-gray-200 rounded-lg p-4">
-          <h3 className="font-semibold text-gray-700 mb-2">📋 Instructions</h3>
-          <ol className="list-decimal list-inside space-y-1 text-sm text-gray-600">
-            <li>Connect your wallet to interact with the blockchain</li>
-            <li>(Optional) Upload your vote file to auto-fill the form</li>
-            <li>Enter your registration index (k_v) from registration</li>
-            <li>Select the candidate you voted for (c)</li>
-            <li>Enter the random number (r) from your vote</li>
-            <li>Click &quot;Verify Vote Integrity&quot; to check your data</li>
-            <li>If verification passes, click &quot;Tally Vote on Blockchain&quot;</li>
-            <li>Wait for transaction confirmation</li>
-            <li>View the updated election results</li>
-          </ol>
+        {/* View Results Button */}
+        <div className="mt-8">
+          <button
+            onClick={handleGetResults}
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-400 text-white font-semibold py-4 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 hover:shadow-lg"
+          >
+            {loading ? (
+              <>
+                <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Loading Results...
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+                </svg>
+                {showResults ? 'Refresh Results' : 'View Election Results'}
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>

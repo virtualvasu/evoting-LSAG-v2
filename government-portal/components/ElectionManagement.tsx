@@ -747,7 +747,12 @@ export default function ElectionManagement() {
           <li><strong>End Election:</strong> Finalize election (Phase: ENDED)</li>
           <li><strong>Reset:</strong> Save results off-chain, then reset for next election</li>
         </ol>
-        <p className="text-xs text-blue-600 mt-3\">\n          <strong>⚠ Phase Dependencies:</strong> Each phase must be properly stopped before advancing to the next phase. This ensures data integrity and proper election flow.\n        </p>\n        <p className="text-xs text-blue-600 mt-1\">\n          The voter ring persists across elections - no need to re-register voters!\n        </p>
+        <p className="text-xs text-blue-600 mt-3">
+          <strong>⚠ Phase Dependencies:</strong> Each phase must be properly stopped before advancing to the next phase. This ensures data integrity and proper election flow.
+        </p>
+        <p className="text-xs text-blue-600 mt-1">
+          The voter ring persists across elections - no need to re-register voters!
+        </p>
       </div>
     </div>
   );
